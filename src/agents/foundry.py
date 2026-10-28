@@ -12,6 +12,7 @@ from agents.definitions import (
     Assessments,
     FoundrySettings,
     GapDraft,
+    KnowledgeSettings,
     definition,
     definition_hash,
 )
@@ -27,6 +28,7 @@ def register(
     output: Path,
     validation_name: str,
     closeout_name: str,
+    knowledge: KnowledgeSettings | None = None,
 ) -> FoundrySettings:
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.models import PromptAgentDefinition
@@ -39,7 +41,12 @@ def register(
         AIProjectClient(endpoint=endpoint, credential=credential) as client,
     ):
         for kind, name in (("validation", validation_name), ("closeout", closeout_name)):
-            body = definition(kind, deployment)
+            body = definition(kind, deployment, knowledge)
+            source = (
+                "Foundry IQ + stub facts"
+                if knowledge and kind == "closeout"
+                else "synthetic local sources"
+            )
             digest = definition_hash(body)
             try:
                 versions = list(client.agents.list_versions(agent_name=name))
@@ -59,7 +66,7 @@ def register(
             created = matching or client.agents.create_version(
                 agent_name=name,
                 definition=PromptAgentDefinition(body),
-                description=f"Close-out {kind}; synthetic local sources, no write tools.",
+                description=f"Close-out {kind}; {source}; no write tools.",
                 metadata={
                     "source": "close-out-demo",
                     "contract_version": "0.1.0",
@@ -76,6 +83,7 @@ def register(
         deployment=deployment,
         model=model,
         modelVersion=model_version,
+        knowledge=knowledge,
         **bindings,
     )
     write_json(output, settings.model_dump())
@@ -88,10 +96,13 @@ async def invoke(
     from agent_framework import Content, Message, tool
     from agent_framework.foundry import FoundryAgent
     from azure.ai.projects.aio import AIProjectClient
-    from azure.identity.aio import AzureCliCredential
+    from azure.identity.aio import DefaultAzureCredential
 
+    use_knowledge = kind == "closeout" and settings.knowledge is not None
+    if use_knowledge and sources.facts["site"]["siteId"] not in settings.knowledge.sites:
+        raise PermissionError("Site is not configured for the shared synthetic knowledge demo")
     binding = settings.validation if kind == "validation" else settings.closeout
-    expected_hash = definition_hash(definition(kind, settings.deployment))
+    expected_hash = definition_hash(definition(kind, settings.deployment, settings.knowledge))
     if binding.definitionHash != expected_hash:
         raise ValueError("Local agent definition changed; register a new version before running")
     calls = []
@@ -135,14 +146,20 @@ async def invoke(
             ],
         )
     async with (
-        AzureCliCredential() as credential,
+        DefaultAzureCredential() as credential,
         AIProjectClient(endpoint=settings.endpoint, credential=credential) as project,
         FoundryAgent(
             project_client=project,
             agent_name=binding.name,
             agent_version=binding.version,
             credential=credential,
-            tools=[get_site_facts, get_documents] if kind == "closeout" else None,
+            tools=(
+                [get_site_facts]
+                if use_knowledge
+                else [get_site_facts, get_documents]
+                if kind == "closeout"
+                else None
+            ),
             timeout=180,
             function_invocation_configuration={
                 "max_iterations": 4,
@@ -163,7 +180,8 @@ async def invoke(
             or remote.status != "active"
         ):
             raise ValueError("Pinned remote version does not match the local definition")
-        response = await agent.run(messages, options={"max_output_tokens": 4000})
+        options = {"max_output_tokens": 4000}
+        response = await agent.run(messages, options=options)
     if not response.response_id:
         raise ValueError("Foundry did not return a response ID")
     if kind == "validation":
@@ -171,9 +189,17 @@ async def invoke(
             Assessments.model_validate_json(response.text), packets, settings
         )
     else:
-        if set(calls) != set(TOOL_DESCRIPTIONS):
+        required_calls = {"get_site_facts"} if use_knowledge else set(TOOL_DESCRIPTIONS)
+        if set(calls) != required_calls:
             raise ValueError("The coordinator did not retrieve both required source sets")
-        result = sources.gap_analysis(GapDraft.model_validate_json(response.text), settings)
+        draft = GapDraft.model_validate_json(response.text)
+        if use_knowledge:
+            from agents.knowledge import retrieval_receipts, validate_document_citations
+
+            knowledge_receipts = retrieval_receipts(response, sources, settings.knowledge)
+            validate_document_citations(draft, sources, knowledge_receipts)
+            calls.append("knowledge_base_retrieve")
+        result = sources.gap_analysis(draft, settings)
     return {
         "correlationId": uuid4().hex,
         "caseId": sources.facts["caseId"],
@@ -189,12 +215,16 @@ async def invoke(
             "agent": "live-foundry-prompt-agent",
             "inference": "live",
             "facts": "local-mcp-stub",
-            "documents": "local-synthetic-files",
+            "documents": "foundry-iq-native-blob-synthetic"
+            if use_knowledge
+            else "local-synthetic-files",
+            **({"knowledgeScope": "shared-operator-demo-no-user-acl"} if use_knowledge else {}),
             "dataverse": "not-connected",
             "contentUnderstanding": "not-connected",
-            "foundryIq": "not-connected",
+            "foundryIq": "live" if use_knowledge else "not-connected",
         },
         "toolCalls": calls,
         "inputs": [row[3] for row in attachments],
         "result": result,
+        **({"knowledgeRetrieval": knowledge_receipts} if use_knowledge else {}),
     }

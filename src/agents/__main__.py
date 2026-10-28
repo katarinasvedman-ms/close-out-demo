@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from agents.definitions import FoundrySettings
+from agents.definitions import FoundrySettings, KnowledgeSettings
 from agents.foundry import invoke, register
 from agents.sources import Sources, mcp_facts
 from shared.local_demo import write_json
@@ -81,7 +81,12 @@ async def smoke(args, settings: FoundrySettings) -> None:
         "limitations": [
             "Synthetic schematics/PDFs; not a field-evidence quality evaluation",
             "Readiness, ticket closure and rework closure are fixture scenarios, not real actions",
-            "No Dataverse, Content Understanding, Foundry IQ, package rendering or live Fabric",
+            "No Dataverse, Content Understanding, package rendering or live Fabric",
+            (
+                "Live Foundry IQ over synthetic document text counterparts, not PDF OCR"
+                if settings.knowledge
+                else "No Foundry IQ; hash-checked local synthetic documents"
+            ),
         ],
     }
     write_json(target / "report.json", report)
@@ -99,6 +104,7 @@ def main() -> None:
     deploy.add_argument("--validation-name", default="close-out-validation")
     deploy.add_argument("--closeout-name", default="close-out-coordinator")
     deploy.add_argument("--config", type=Path, default=Path(".local") / "foundry" / "config.json")
+    deploy.add_argument("--knowledge-config", type=Path)
     for command in ("validate", "gaps", "smoke"):
         sub = commands.add_parser(command)
         sub.add_argument("--config", type=Path, default=Path(".local") / "foundry" / "config.json")
@@ -122,6 +128,13 @@ def main() -> None:
             args.config,
             args.validation_name,
             args.closeout_name,
+            (
+                KnowledgeSettings.model_validate_json(
+                    args.knowledge_config.read_text(encoding="utf-8")
+                )
+                if args.knowledge_config
+                else None
+            ),
         )
         print(settings.model_dump_json(indent=2))
     else:

@@ -1,4 +1,9 @@
 components:
+  fresh-portal-deployment:
+    availability: Custom
+    mode: implemented-not-fresh-cloud-verified
+    implementation: infra/fresh
+    note: Resource-group Deploy to Azure ARM template and agents.bootstrap completion command; new Foundry project, native IQ and prompt agents only, with local-client verification. No hosted agent, container registry or runtime deployment. Requires publication, target quota/policy/permissions and a fresh-target acceptance run. No automatic Storage policy exception.
   foundry-model:
     availability: GA
     mode: live-regional
@@ -11,9 +16,19 @@ components:
     note: Versioned Foundry prompt agent with real PNG/PDF inference; synthetic fixtures, no Content Understanding or Dataverse writes.
   closeout-agent:
     availability: Custom
-    mode: live-with-stub-tools
+    mode: live-iq-with-stub-facts
     implementation: agents.foundry
-    note: Versioned Foundry prompt agent; Agent Framework executes scoped local MCP/document tools. Cited drafts only, no approvals/actions/packages.
+    note: Prompt version 9 uses one shared knowledge base and exact native MCP connection for both sites. Agent Framework executes scoped stub facts. Cited drafts only, no approvals/actions/packages.
+  foundry-iq:
+    availability: Preview
+    mode: live-synthetic-documents
+    implementation: infra/knowledge
+    note: France Central Basic Search, one shared base and native azureBlob source with IQ-generated ingestion resources. Low query planning reuses the Sweden Central regional model through Search managed identity, with explicit retrieval instructions and extractive results. Project-managed-identity MCP and managed refresh verified. No per-user ACL enforcement; case citation relevance is checked separately. Old per-site pipelines retired.
+  knowledge-blob:
+    availability: GA
+    mode: live-synthetic-documents
+    implementation: agents.knowledge_setup
+    note: Sweden Central private container; native source reads eight canonical text counterparts plus a labelled operator refresh note under iq/. Legacy PDF/text blobs outside that prefix remain unindexed by this source. No OCR. Shared keys and anonymous access disabled. Approved dedicated-group security-control exception documented in MANUAL_STEPS.md.
   synthetic-seed:
     availability: Custom
     mode: local

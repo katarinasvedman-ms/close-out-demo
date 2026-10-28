@@ -9,6 +9,12 @@
 
 The user authorized implementation against provisional v0.1.0 contracts without waiting for cross-track sign-off; full end-to-end integration may not be needed. Local seed expansion, synthetic evidence, readiness/event replay and a scoped stdio Data Agent MCP stub now run through `uv run --frozen python -m shared.local_demo`. See README for the implemented commands and limitations. The architecture and build order below remain targets for live delivery, not a claim that those components exist.
 
+The current deployment publishes Foundry prompt agents and native IQ, not a hosted
+agent or application container. The local Python client supplies synthetic facts
+for verification only; native Fabric Data Agent MCP integration remains separate.
+The portal template and completion command are described in `DEPLOY-TO-AZURE.md`.
+The broader azd project/workflows below remain implementation targets.
+
 Unresolved physical mappings, platform payloads, approval provenance and MCP authentication remain isolated from the local stubs. Revisit them before connecting live services. This execution choice does not authorize cloud provisioning or waive the process decision rights.
 
 ---
@@ -187,7 +193,7 @@ Resource group, Log Analytics, Application Insights, Key Vault, Storage (ADLS Ge
 - Agents (Agent Framework) are **code in `src/agents/`**, deployed by a script or azd service in the pipeline. Agent definitions, instructions, tool bindings (Data Agent MCP, Foundry IQ, APIM MCP) and model versions are versioned in Git. No portal-only agents.
 - Model names and versions are parameters; record the model and version used in every decision log entry.
 - Guardrails (content filters, Prompt Shields) configured as code. `TODO(verify)` which settings are Bicep-deployable versus SDK.
-- Foundry IQ / AI Search index definitions and indexers as code; documents indexed from Blob.
+- Foundry IQ knowledge-source/base definitions as code; use the native Azure Blob source so IQ manages its generated data source, indexer, skillset and index. Do not manually edit generated ingestion resources. Shared operator-demo retrieval does not imply per-user ACL enforcement.
 
 ### 5.5 Things that may not be fully automatable
 List each in `docs/MANUAL_STEPS.md` with: why it is manual, the exact steps, and a verification script. Expected candidates (all `TODO(verify)`):

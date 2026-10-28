@@ -1,0 +1,6 @@
+SYNTHETIC OPERATOR DEMO NOTE - NOT CASE EVIDENCE OR AN APPROVAL
+Managed ingestion confirmation: IQ-MANAGED-BLOB-REFRESH-1
+
+This note demonstrates adding a Blob document to the shared Foundry IQ source.
+Foundry IQ manages extraction, indexing and scheduled refresh.
+This note does not change any site's readiness, facts or acceptance requirements.

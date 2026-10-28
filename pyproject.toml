@@ -20,6 +20,7 @@ agents = [
     "agent-framework-foundry==1.15.0",
     "azure-ai-projects>=2.2.0,<2.8.0",
     "azure-identity==1.27.0",
+    "azure-storage-blob>=12.24,<13",
 ]
 dev = [
     "datamodel-code-generator==0.35.0",
