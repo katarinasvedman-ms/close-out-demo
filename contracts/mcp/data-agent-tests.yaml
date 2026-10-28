@@ -1,0 +1,66 @@
+status: draft
+notes: >-
+  Contract questions for shared synthetic scenarios, not claims about a deployed
+  MCP tool or its response format. Expected facts must be grounded in the chosen
+  fixture state. Lamin must confirm transport, tool schemas, auth and visibility.
+cases:
+  - id: blocked-main
+    scenario: initial-blocked
+    question: Why is SE-STO-0042 blocked?
+    expectedRefs: [PHOTO-19, PHOTO-20, PL-0042-01]
+    expectedFacts: [ConstructionComplete is Actualized, grounding label missing, sector B azimuth differs from RFDS, blocking punch-list ticket is open]
+  - id: grounding-gap
+    scenario: initial-blocked
+    question: What is wrong with PHOTO-19?
+    expectedRefs: [PHOTO-19]
+    expectedFacts: [grounding bar label missing]
+  - id: azimuth-spec
+    scenario: initial-blocked
+    question: Explain PHOTO-20 against the RFDS.
+    expectedRefs: [PHOTO-20]
+    expectedFacts: [sector B, planned 120 degrees, observed 127 degrees, deviation 7 degrees]
+  - id: ticket-blocker
+    scenario: initial-blocked
+    question: Which punch-list item blocks SE-STO-0042?
+    expectedRefs: [PL-0042-01]
+    expectedFacts: [blocking, Open, cable labelling sector B missing]
+  - id: program-a-threshold
+    scenario: initial-blocked
+    question: What photo auto-review threshold applies to CUST-A-5G-ROLLOUT?
+    expectedRefs: [CUST-A-5G-ROLLOUT]
+    expectedFacts: ["0.75"]
+  - id: program-b-requirements
+    scenario: program-b
+    question: What differs for CUST-B-5G-ROLLOUT?
+    expectedRefs: [CUST-B-5G-ROLLOUT]
+    expectedFacts: ["0.85", customer_pre_acceptance is mandatory, access_road checklist item]
+  - id: ready-fallback
+    scenario: fallback-ready
+    question: Is SE-GOT-0017 ready for package compilation?
+    expectedRefs: [SE-GOT-0017]
+    expectedFacts: [Ready, all mandatory evidence accepted, no blocking tickets, no active-case open rework]
+  - id: current-photo
+    scenario: replacements-reviewed
+    question: Which photos replace the rejected evidence?
+    expectedRefs: [PHOTO-19b, PHOTO-20b]
+    expectedFacts: [current replacements, PHOTO-19 and PHOTO-20 are superseded]
+  - id: rework-open
+    scenario: replacements-reviewed-rework-open
+    question: Are compliant replacement photos sufficient to become Ready?
+    expectedRefs: [SE-STO-0042]
+    expectedFacts: [Blocked while active-case rework is not Closed]
+  - id: low-confidence
+    scenario: auto-below-threshold
+    question: Does compliant Auto evidence below the program threshold count?
+    expectedRefs: [SE-STO-0042]
+    expectedFacts: [does not count until accepted under the review rule]
+  - id: construction-first
+    scenario: construction-planned
+    question: What is readiness before ConstructionComplete is Actualized?
+    expectedRefs: [SE-STO-0042]
+    expectedFacts: [NotReady]
+  - id: access-scope
+    scenario: caller-without-site-access
+    question: Show me another subcontractor's site evidence.
+    expectedRefs: []
+    expectedFacts: [no unauthorized facts or evidence returned]

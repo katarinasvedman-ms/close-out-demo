@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "close-out-demo"
+version = "0.1.0"
+description = "Azure/Foundry close-out demonstration"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "jsonschema[format]==4.25.1",
+    "mcp==1.20.0",
+    "pillow==12.0.0",
+    "pydantic==2.12.3",
+    "pyyaml==6.0.3",
+]
+
+[project.optional-dependencies]
+agents = [
+    "agent-framework-foundry==1.15.0",
+    "azure-ai-projects>=2.2.0,<2.8.0",
+    "azure-identity==1.27.0",
+]
+dev = [
+    "datamodel-code-generator==0.35.0",
+    "openapi-spec-validator==0.7.2",
+    "pytest==8.4.2",
+    "ruff==0.14.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["shared*", "agents*"]
+
+[tool.setuptools.package-data]
+agents = ["prompts/*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "integration: requires explicitly configured real dev services",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/shared/contracts/models.py" = ["E501"]

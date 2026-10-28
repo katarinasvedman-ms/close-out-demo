@@ -1,0 +1,47 @@
+{
+  "Gap": {
+    "conditionType": "ChecklistItem", "conditionId": "CHECKLIST-A-GROUNDING", "reason": "Grounding bar missing label",
+    "evidenceRefs": [{ "objectType": "Photo", "id": "PHOTO-19" }, { "objectType": "ValidationResult", "id": "VR-PHOTO-19-1" }]
+  },
+  "ReworkProposal": {
+    "reason": "Correct grounding, sector B azimuth and cable labels", "subcontractorId": "SYNTH-CREW-01",
+    "validationResultIds": ["VR-PHOTO-19-1", "VR-PHOTO-20-1"], "ticketIds": ["PL-0042-01"]
+  },
+  "GapAnalysis": {
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+    "generatedAt": "2026-10-27T09:15:00Z", "model": "fixture-only", "modelVersion": "fixture-only",
+    "gaps": [
+      {
+        "conditionType": "ChecklistItem", "conditionId": "CHECKLIST-A-GROUNDING", "reason": "Grounding bar missing label",
+        "evidenceRefs": [{ "objectType": "Photo", "id": "PHOTO-19" }, { "objectType": "ValidationResult", "id": "VR-PHOTO-19-1" }]
+      },
+      {
+        "conditionType": "ChecklistItem", "conditionId": "CHECKLIST-A-AZIMUTH-B", "reason": "Sector B differs by 7 degrees from RFDS",
+        "evidenceRefs": [{ "objectType": "Photo", "id": "PHOTO-20" }, { "objectType": "AcceptanceArtifact", "id": "ART-0042-RFDS", "version": "1" }]
+      },
+      {
+        "conditionType": "Ticket", "conditionId": "PL-0042-01", "reason": "Blocking cable labelling ticket is open",
+        "evidenceRefs": [{ "objectType": "Ticket", "id": "PL-0042-01" }]
+      }
+    ],
+    "proposedRework": {
+      "reason": "Correct grounding, sector B azimuth and cable labels", "subcontractorId": "SYNTH-CREW-01",
+      "validationResultIds": ["VR-PHOTO-19-1", "VR-PHOTO-20-1"], "ticketIds": ["PL-0042-01"]
+    }
+  },
+  "PackageFile": { "format": "docx", "blobUrl": "https://storage.example.invalid/packages/PKG-0017-1.docx" },
+  "PackageManifest": {
+    "artifactId": "PKG-0017-1", "caseId": "a1ee1c14-b271-4bf8-a373-d70cb5e901c9", "siteId": "SE-GOT-0017",
+    "createdAt": "2026-10-27T11:00:00Z", "model": "fixture-only", "modelVersion": "fixture-only",
+    "evidenceRefs": [
+      { "objectType": "AcceptanceArtifact", "id": "ART-0017-PHOTOS", "version": "1" },
+      { "objectType": "AcceptanceArtifact", "id": "ART-0017-ASBUILT", "version": "1" },
+      { "objectType": "AcceptanceArtifact", "id": "ART-0017-CERTIFICATE", "version": "1" },
+      { "objectType": "AcceptanceArtifact", "id": "ART-0017-RFDS", "version": "1" }
+    ],
+    "files": [
+      { "format": "docx", "blobUrl": "https://storage.example.invalid/packages/PKG-0017-1.docx" },
+      { "format": "pdf", "blobUrl": "https://storage.example.invalid/packages/PKG-0017-1.pdf" }
+    ]
+  }
+}

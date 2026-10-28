@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:codes",
+  "title": "CodeLists",
+  "description": "Known producer codes. Generated reader types accept future string codes and boundary tooling logs them.",
+  "type": "object",
+  "required": ["ArtifactType", "ChecklistItemCode", "MilestoneType", "MilestoneStatus", "WorkOrderType", "WorkOrderStatus", "TicketType", "TicketStatus", "ArtifactStatus", "ReviewStatus", "Readiness", "CloseOutStatus", "StatusReason", "ActorType"],
+  "properties": {
+    "ArtifactType": { "type": "string", "enum": ["photo_pack", "as_built", "acceptance_certificate", "rfds", "integration_test_report", "customer_pre_acceptance", "close_out_package"] },
+    "ChecklistItemCode": { "type": "string", "enum": ["antenna_label", "cabling", "grounding", "safety_signage", "azimuth_sector_a", "azimuth_sector_b", "azimuth_sector_c", "access_road"] },
+    "MilestoneType": { "type": "string", "enum": ["ConstructionComplete", "IntegrationComplete", "CloseOutSubmitted", "PAC"] },
+    "MilestoneStatus": { "type": "string", "enum": ["Planned", "Actualized"] },
+    "WorkOrderType": { "type": "string", "enum": ["Installation", "Rework"] },
+    "WorkOrderStatus": { "type": "string", "enum": ["Open", "InProgress", "Closed"] },
+    "TicketType": { "type": "string", "enum": ["PunchList", "Other"] },
+    "TicketStatus": { "type": "string", "enum": ["Open", "Closed"] },
+    "ArtifactStatus": { "type": "string", "enum": ["Missing", "Submitted", "Validated", "Rejected"] },
+    "ReviewStatus": { "type": "string", "enum": ["Auto", "NeedsReview", "Confirmed", "Overridden"] },
+    "Readiness": { "type": "string", "enum": ["NotReady", "Blocked", "Ready"] },
+    "CloseOutStatus": { "type": "string", "enum": ["NotReady", "Blocked", "Ready", "Submitted", "Accepted"] },
+    "StatusReason": { "type": "string", "enum": ["AwaitingConstructionComplete", "MissingEvidence", "ReworkDraftReady", "AwaitingReworkApproval", "ReworkApproved", "ReworkRejected", "ReworkOrdered", "ActionFailed", "PackageCompiling", "PackageReady", "AwaitingSubmissionApproval", "SubmissionApproved", "SubmissionRejected", "AwaitingCustomer", "PAC"] },
+    "ActorType": { "type": "string", "enum": ["user", "agent", "system", "policy"] }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,57 @@
+[
+  {
+    "schema": "events/event-envelope.schema.json",
+    "example": "examples/photo-uploaded.json"
+  },
+  {
+    "schema": "events/event-envelope.schema.json",
+    "example": "examples/pre-case-upload.json"
+  },
+  {
+    "schema": "activator/readiness-signal.schema.json",
+    "example": "examples/readiness-blocked.json"
+  },
+  {
+    "schema": "activator/readiness-signal.schema.json",
+    "example": "examples/readiness-ready.json"
+  },
+  { "schema": "codelists/codes.schema.json", "example": "examples/code-lists.json" },
+  { "schema": "models.schema.json#/$defs/CustomerProject", "example": "examples/shared-objects.json#/CustomerProject" },
+  { "schema": "models.schema.json#/$defs/ArtifactRequirement", "example": "examples/shared-objects.json#/ArtifactRequirement" },
+  { "schema": "models.schema.json#/$defs/ChecklistItem", "example": "examples/shared-objects.json#/ChecklistItem" },
+  { "schema": "models.schema.json#/$defs/Site", "example": "examples/shared-objects.json#/Site" },
+  { "schema": "models.schema.json#/$defs/Milestone", "example": "examples/shared-objects.json#/Milestone" },
+  { "schema": "models.schema.json#/$defs/Subcontractor", "example": "examples/shared-objects.json#/Subcontractor" },
+  { "schema": "models.schema.json#/$defs/WorkOrder", "example": "examples/shared-objects.json#/WorkOrder" },
+  { "schema": "models.schema.json#/$defs/Ticket", "example": "examples/shared-objects.json#/Ticket" },
+  { "schema": "models.schema.json#/$defs/AcceptanceArtifact", "example": "examples/shared-objects.json#/AcceptanceArtifact" },
+  { "schema": "models.schema.json#/$defs/Photo", "example": "examples/shared-objects.json#/Photo" },
+  { "schema": "models.schema.json#/$defs/ValidationResult", "example": "examples/shared-objects.json#/ValidationResult" },
+  { "schema": "models.schema.json#/$defs/ApprovalDecision", "example": "examples/shared-objects.json#/ApprovalDecision" },
+  { "schema": "models.schema.json#/$defs/CloseOutCase", "example": "examples/shared-objects.json#/CloseOutCase" },
+  { "schema": "models.schema.json#/$defs/EvidenceRef", "example": "examples/shared-objects.json#/EvidenceRef" },
+  { "schema": "models.schema.json#/$defs/DecisionLogEntry", "example": "examples/shared-objects.json#/DecisionLogEntry" },
+  { "schema": "models.schema.json#/$defs/EntityMatchCandidate", "example": "examples/shared-objects.json#/EntityMatchCandidate" },
+  { "schema": "events/photo-uploaded.schema.json", "example": "examples/events.json#/PhotoUploaded" },
+  { "schema": "events/artifact-uploaded.schema.json", "example": "examples/events.json#/ArtifactUploaded" },
+  { "schema": "events/validation-result-created.schema.json", "example": "examples/events.json#/ValidationResultCreated" },
+  { "schema": "events/validation-result-reviewed.schema.json", "example": "examples/events.json#/ValidationResultReviewed" },
+  { "schema": "events/work-order-changed.schema.json", "example": "examples/events.json#/WorkOrderChanged" },
+  { "schema": "events/ticket-changed.schema.json", "example": "examples/events.json#/TicketChanged" },
+  { "schema": "events/milestone-changed.schema.json", "example": "examples/events.json#/MilestoneChanged" },
+  { "schema": "messages/close-out-case-changed.schema.json", "example": "examples/events.json#/CloseOutCaseChanged" },
+  { "schema": "apim/actions.schema.json#/$defs/ActionContext", "example": "examples/actions.json#/ActionContext" },
+  { "schema": "apim/actions.schema.json#/$defs/CreateReworkRequest", "example": "examples/actions.json#/CreateReworkRequest" },
+  { "schema": "apim/actions.schema.json#/$defs/CloseReworkRequest", "example": "examples/actions.json#/CloseReworkRequest" },
+  { "schema": "apim/actions.schema.json#/$defs/ClosePunchListRequest", "example": "examples/actions.json#/ClosePunchListRequest" },
+  { "schema": "apim/actions.schema.json#/$defs/SubmitCloseoutRequest", "example": "examples/actions.json#/SubmitCloseoutRequest" },
+  { "schema": "apim/actions.schema.json#/$defs/ActionReceipt", "example": "examples/actions.json#/ActionReceipt" },
+  { "schema": "apim/actions.schema.json#/$defs/ActionError", "example": "examples/actions.json#/ActionError" },
+  { "schema": "apim/actions.schema.json#/$defs/SiteView", "example": "examples/actions.json#/SiteView" },
+  { "schema": "apim/actions.schema.json#/$defs/UploadMetadata", "example": "examples/actions.json#/UploadMetadata" },
+  { "schema": "agents/outputs.schema.json#/$defs/Gap", "example": "examples/agent-outputs.json#/Gap" },
+  { "schema": "agents/outputs.schema.json#/$defs/ReworkProposal", "example": "examples/agent-outputs.json#/ReworkProposal" },
+  { "schema": "agents/outputs.schema.json#/$defs/GapAnalysis", "example": "examples/agent-outputs.json#/GapAnalysis" },
+  { "schema": "agents/outputs.schema.json#/$defs/PackageFile", "example": "examples/agent-outputs.json#/PackageFile" },
+  { "schema": "agents/outputs.schema.json#/$defs/PackageManifest", "example": "examples/agent-outputs.json#/PackageManifest" }
+]

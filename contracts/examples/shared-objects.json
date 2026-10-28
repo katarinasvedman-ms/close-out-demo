@@ -1,0 +1,87 @@
+{
+  "CustomerProject": {
+    "projectId": "PROJECT-A", "programCode": "CUST-A-5G-ROLLOUT", "customerName": "Synthetic Customer A",
+    "customerId": "CUSTOMER-A", "market": "SE", "lowConfidenceThreshold": 0.75
+  },
+  "ArtifactRequirement": {
+    "requirementId": "REQ-A-PHOTOS", "projectId": "PROJECT-A",
+    "artifactType": "photo_pack", "mandatory": true, "phase": "close_out"
+  },
+  "ChecklistItem": {
+    "checklistItemId": "CHECKLIST-A-GROUNDING", "requirementId": "REQ-A-PHOTOS",
+    "itemCode": "grounding", "description": "Grounding bar has a visible label", "mandatory": true, "rfdsCheck": false
+  },
+  "Site": {
+    "siteId": "SE-STO-0042", "siteName": "Synthetic Stockholm 0042", "sourceSiteIds": ["ST-0042"],
+    "projectId": "PROJECT-A", "market": "SE", "latitude": 59.3293, "longitude": 18.0686,
+    "siteType": "rooftop", "currentPhase": "close_out", "readiness": "Blocked",
+    "readinessMissing": ["CHECKLIST-A-GROUNDING", "CHECKLIST-A-AZIMUTH-B", "PL-0042-01"],
+    "readinessEvaluatedAt": "2026-10-27T09:00:01Z"
+  },
+  "Milestone": {
+    "milestoneId": "MS-0042-CC", "siteId": "SE-STO-0042", "projectId": "PROJECT-A",
+    "milestoneType": "ConstructionComplete", "status": "Actualized",
+    "plannedDate": "2026-10-26T09:00:00Z", "actualDate": "2026-10-27T08:00:00Z",
+    "sourceUpdatedAt": "2026-10-27T08:00:00Z", "isStale": false
+  },
+  "Subcontractor": {
+    "subcontractorId": "SYNTH-CREW-01", "name": "Synthetic Crew One",
+    "normalizedName": "synthetic crew one", "sourceNames": ["Synthetic Crew One"]
+  },
+  "WorkOrder": {
+    "workOrderId": "WO-0042-R1", "siteId": "SE-STO-0042", "subcontractorId": "SYNTH-CREW-01",
+    "workOrderType": "Rework", "status": "Open", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "reason": "Correct grounding and sector B evidence", "createdAt": "2026-10-27T10:00:00Z",
+    "dueDate": null, "closedAt": null, "version": "1"
+  },
+  "Ticket": {
+    "ticketId": "PL-0042-01", "siteId": "SE-STO-0042", "ticketType": "PunchList", "blocking": true,
+    "status": "Open", "description": "Cable labelling sector B missing", "checklistItemCode": "cabling",
+    "openedAt": "2026-10-27T08:00:00Z", "closedAt": null, "closingPhotoId": null
+  },
+  "AcceptanceArtifact": {
+    "artifactId": "ART-0042-PHOTOS", "siteId": "SE-STO-0042", "requirementId": "REQ-A-PHOTOS",
+    "artifactType": "photo_pack", "status": "Submitted",
+    "blobUrl": "https://storage.example.invalid/photos/pack-0042", "version": "1",
+    "submittedBy": "synthetic-technician", "submittedAt": "2026-10-27T08:30:00Z",
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc"
+  },
+  "Photo": {
+    "photoId": "PHOTO-19", "artifactId": "ART-0042-PHOTOS", "siteId": "SE-STO-0042",
+    "checklistItemCode": "grounding", "sector": null,
+    "blobUrl": "https://storage.example.invalid/photos/PHOTO-19.jpg",
+    "latitude": 59.3293, "longitude": 18.0686, "capturedAt": "2026-10-27T08:20:00Z",
+    "uploadedBy": "synthetic-technician", "replacesPhotoId": null, "isCurrent": true
+  },
+  "ValidationResult": {
+    "validationResultId": "VR-PHOTO-19-1", "photoId": "PHOTO-19", "checklistItemCode": "grounding",
+    "compliant": false, "confidence": 0.96, "findings": ["Grounding bar missing label"],
+    "rfdsArtifactId": null, "rfdsReference": null, "reviewStatus": "Auto",
+    "validatedBy": "synthetic-validator", "model": "fixture-only", "modelVersion": "fixture-only",
+    "validatedAt": "2026-10-27T09:00:00Z", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc"
+  },
+  "ApprovalDecision": {
+    "outcome": "Approved", "actorType": "user", "actorId": "synthetic-construction-manager",
+    "decidedAt": "2026-10-27T09:45:00Z", "policyVersion": "fixture-policy-v1", "comment": "Proceed with rework"
+  },
+  "CloseOutCase": {
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+    "status": "Blocked", "statusReason": "MissingEvidence", "bpfStage": "Rework",
+    "reworkDecision": null, "reworkPolicyVersion": null, "submissionDecision": null, "packageArtifactId": null,
+    "createdAt": "2026-10-27T08:00:01Z", "submittedAt": null, "acceptedAt": null, "slaDueAt": null
+  },
+  "EvidenceRef": { "objectType": "Photo", "id": "PHOTO-19", "version": "1" },
+  "DecisionLogEntry": {
+    "entryId": "f6950cf0-dcd3-45a2-a250-e6db2f884cd7", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "seq": 1, "timestamp": "2026-10-27T09:00:00Z", "actorType": "agent", "actorId": "synthetic-validator",
+    "role": "validation", "step": "ValidatePhoto", "inputs": { "photoId": "PHOTO-19" },
+    "evidenceRefs": [{ "objectType": "Photo", "id": "PHOTO-19", "version": "1" }],
+    "model": "fixture-only", "modelVersion": "fixture-only", "confidence": 0.96,
+    "ruleResult": null, "outcome": "Noncompliant", "traceId": "11111111111111111111111111111111"
+  },
+  "EntityMatchCandidate": {
+    "candidateId": "MATCH-SITE-0042", "entityType": "Site", "candidateIds": ["ST-0042", "LEGACY-0042"],
+    "matchConfidence": 0.91, "matchReasons": ["Same synthetic coordinates"], "status": "Pending",
+    "decidedBy": null, "decidedAt": null, "survivorId": null
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:actions",
+  "title": "BusinessAction",
+  "description": "Proposed APIM boundaries. Inputs are untrusted: the executor must re-read trusted approval/evidence and target versions.",
+  "anyOf": [
+    { "$ref": "#/$defs/CreateReworkRequest" }, { "$ref": "#/$defs/CloseReworkRequest" },
+    { "$ref": "#/$defs/ClosePunchListRequest" }, { "$ref": "#/$defs/SubmitCloseoutRequest" },
+    { "$ref": "#/$defs/ActionReceipt" }, { "$ref": "#/$defs/ActionError" },
+    { "$ref": "#/$defs/SiteView" }, { "$ref": "#/$defs/UploadMetadata" }
+  ],
+  "$defs": {
+    "ActionContext": {
+      "title": "ActionContext", "type": "object",
+      "required": ["caseId", "siteId", "transition", "expectedVersion"],
+      "properties": {
+        "caseId": { "type": "string", "format": "uuid" },
+        "siteId": { "type": "string", "minLength": 1 },
+        "transition": { "type": "string", "minLength": 1 },
+        "expectedVersion": { "type": "string", "minLength": 1, "description": "Opaque target SoR version, not the Dataverse rowVersion. Target for creation needs owner agreement." },
+        "transitionOccurrenceId": { "type": "string", "format": "uuid", "description": "Optional proposal for repeated transitions; key composition requires all-track review." }
+      }, "additionalProperties": true
+    },
+    "CreateReworkRequest": {
+      "title": "CreateReworkRequest", "type": "object",
+      "allOf": [{ "$ref": "#/$defs/ActionContext" }],
+      "required": ["subcontractorId", "reason", "validationResultIds", "ticketIds", "approvalEntryId"],
+      "properties": {
+        "subcontractorId": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "validationResultIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "ticketIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "approvalEntryId": { "type": "string", "format": "uuid" }
+      }, "additionalProperties": true
+    },
+    "CloseReworkRequest": {
+      "title": "CloseReworkRequest", "type": "object",
+      "description": "Closure authorization source/trigger is unresolved; evidence alone is not approval.",
+      "allOf": [{ "$ref": "#/$defs/ActionContext" }],
+      "required": ["workOrderId", "evidenceRefs"],
+      "properties": {
+        "workOrderId": { "type": "string", "minLength": 1 },
+        "evidenceRefs": { "type": "array", "minItems": 1, "items": { "$ref": "urn:close-out-demo:contracts:models#/$defs/EvidenceRef" } }
+      }, "additionalProperties": true
+    },
+    "ClosePunchListRequest": {
+      "title": "ClosePunchListRequest", "type": "object",
+      "description": "Closing photo must be authorized, current and accepted; closure actor/policy needs owner agreement.",
+      "allOf": [{ "$ref": "#/$defs/ActionContext" }],
+      "required": ["ticketId", "closingPhotoId"],
+      "properties": {
+        "ticketId": { "type": "string", "minLength": 1 },
+        "closingPhotoId": { "type": "string", "minLength": 1 }
+      }, "additionalProperties": true
+    },
+    "SubmitCloseoutRequest": {
+      "title": "SubmitCloseoutRequest", "type": "object",
+      "allOf": [{ "$ref": "#/$defs/ActionContext" }],
+      "required": ["packageArtifactId", "approvalEntryId"],
+      "properties": {
+        "packageArtifactId": { "type": "string", "minLength": 1 },
+        "approvalEntryId": { "type": "string", "format": "uuid" }
+      }, "additionalProperties": true
+    },
+    "ActionReceipt": {
+      "title": "ActionReceipt", "type": "object",
+      "required": ["receiptId", "idempotencyKey", "caseId", "siteId", "action", "targetId", "targetVersion", "completedAt", "evidenceRefs"],
+      "properties": {
+        "receiptId": { "type": "string", "format": "uuid" },
+        "idempotencyKey": { "type": "string", "minLength": 1 },
+        "caseId": { "type": "string", "format": "uuid" },
+        "siteId": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "enum": ["create-rework-work-order", "close-rework-work-order", "close-punch-list-item", "submit-closeout"] },
+        "targetId": { "type": "string", "minLength": 1 },
+        "targetVersion": { "type": "string", "minLength": 1 },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "evidenceRefs": { "type": "array", "items": { "$ref": "urn:close-out-demo:contracts:models#/$defs/EvidenceRef" } }
+      }, "additionalProperties": true
+    },
+    "ActionError": {
+      "title": "ActionError", "type": "object",
+      "required": ["code", "message", "traceId", "retryable"],
+      "properties": {
+        "code": { "type": "string", "enum": ["InvalidRequest", "Forbidden", "NotFound", "VersionConflict", "IdempotencyConflict", "DependencyUnavailable", "ActionFailed"] },
+        "message": { "type": "string", "minLength": 1 },
+        "traceId": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+        "retryable": { "type": "boolean" }
+      }, "additionalProperties": true
+    },
+    "SiteView": {
+      "title": "SiteView", "type": "object",
+      "required": ["site", "milestones", "workOrders", "tickets", "artifacts", "photos", "validations", "activeCase"],
+      "properties": {
+        "site": { "$ref": "urn:close-out-demo:contracts:models#/$defs/Site" },
+        "milestones": { "type": "array", "items": { "$ref": "urn:close-out-demo:contracts:models#/$defs/Milestone" } },
+        "workOrders": { "type": "array", "items": { "$ref": "urn:close-out-demo:contracts:models#/$defs/WorkOrder" } },
+        "tickets": { "type": "array", "items": { "$ref": "urn:close-out-demo:contracts:models#/$defs/Ticket" } },
+        "artifacts": { "type": "array", "items": { "$ref": "urn:close-out-demo:contracts:models#/$defs/AcceptanceArtifact" } },
+        "photos": { "type": "array", "items": { "$ref": "urn:close-out-demo:contracts:models#/$defs/Photo" } },
+        "validations": { "type": "array", "items": { "$ref": "urn:close-out-demo:contracts:models#/$defs/ValidationResult" } },
+        "activeCase": { "anyOf": [{ "$ref": "urn:close-out-demo:contracts:models#/$defs/CloseOutCase" }, { "type": "null" }] }
+      }, "additionalProperties": true
+    },
+    "UploadMetadata": {
+      "title": "UploadMetadata", "type": "object",
+      "description": "Metadata only; bytes are a separate multipart field. Uploader identity comes from the authenticated caller, never this body.",
+      "required": ["siteId", "caseId", "requirementId", "artifactType"],
+      "properties": {
+        "siteId": { "type": "string", "minLength": 1 },
+        "caseId": { "type": ["string", "null"], "format": "uuid" },
+        "requirementId": { "type": "string", "minLength": 1 },
+        "artifactType": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ArtifactType" },
+        "checklistItemCode": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ChecklistItemCode" },
+        "sector": { "type": ["string", "null"] },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "capturedAt": { "type": "string", "format": "date-time" },
+        "replacesPhotoId": { "type": ["string", "null"] }
+      },
+      "allOf": [{
+        "if": { "properties": { "artifactType": { "const": "photo_pack" } }, "required": ["artifactType"] },
+        "then": {
+          "properties": {
+            "checklistItemCode": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ChecklistItemCode" },
+            "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+            "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+            "capturedAt": { "type": "string", "format": "date-time" },
+            "replacesPhotoId": { "type": ["string", "null"] }
+          },
+          "required": ["checklistItemCode", "latitude", "longitude", "capturedAt", "replacesPhotoId"]
+        }
+      }], "additionalProperties": true
+    }
+  }
+}

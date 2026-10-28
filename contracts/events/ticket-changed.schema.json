@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:ticket-changed",
+  "title": "TicketChanged",
+  "allOf": [{ "$ref": "urn:close-out-demo:contracts:event-envelope" }],
+  "type": "object",
+  "properties": {
+    "eventType": { "const": "TicketChanged" },
+    "data": { "$ref": "urn:close-out-demo:contracts:models#/$defs/Ticket" }
+  }
+}

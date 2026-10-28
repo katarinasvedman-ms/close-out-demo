@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "0.1.0",
+  "eventType": "PhotoUploaded",
+  "eventId": "f1070d51-fef5-4531-aa0d-005e3a238373",
+  "caseId": null,
+  "siteId": "SE-STO-0042",
+  "occurredAt": "2026-10-27T09:00:00Z",
+  "producer": "azure.api",
+  "data": {
+    "photoId": "PHOTO-19"
+  }
+}

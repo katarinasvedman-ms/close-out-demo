@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:milestone-changed",
+  "title": "MilestoneChanged",
+  "allOf": [{ "$ref": "urn:close-out-demo:contracts:event-envelope" }],
+  "type": "object",
+  "properties": {
+    "eventType": { "const": "MilestoneChanged" },
+    "data": { "$ref": "urn:close-out-demo:contracts:models#/$defs/Milestone" }
+  }
+}

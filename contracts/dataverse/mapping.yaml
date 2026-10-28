@@ -1,0 +1,101 @@
+status: draft
+notes: >-
+  TODO(verify): Henrik must supply table logical names, entity-set names,
+  column logical names and choice values. Null means unresolved, never a
+  literal runtime column name. These are logical interfaces, not a Dataverse solution.
+tables:
+  CloseOutCase:
+    logicalName: null
+    entitySetName: null
+    columns:
+      caseId: null
+      siteId: null
+      status: null
+      statusReason: null
+      bpfStage: null
+      reworkDecision: null
+      reworkPolicyVersion: null
+      submissionDecision: null
+      packageArtifactId: null
+      createdAt: null
+      submittedAt: null
+      acceptedAt: null
+      slaDueAt: null
+  Photo:
+    logicalName: null
+    entitySetName: null
+    columns:
+      photoId: null
+      artifactId: null
+      siteId: null
+      checklistItemCode: null
+      sector: null
+      blobUrl: null
+      latitude: null
+      longitude: null
+      capturedAt: null
+      uploadedBy: null
+      replacesPhotoId: null
+      isCurrent: null
+  AcceptanceArtifact:
+    logicalName: null
+    entitySetName: null
+    columns:
+      artifactId: null
+      siteId: null
+      requirementId: null
+      artifactType: null
+      status: null
+      blobUrl: null
+      version: null
+      submittedBy: null
+      submittedAt: null
+      caseId: null
+  ValidationResult:
+    logicalName: null
+    entitySetName: null
+    columns:
+      validationResultId: null
+      photoId: null
+      artifactId: null
+      checklistItemCode: null
+      compliant: null
+      confidence: null
+      findings: null
+      rfdsArtifactId: null
+      rfdsReference: null
+      reviewStatus: null
+      validatedBy: null
+      model: null
+      modelVersion: null
+      validatedAt: null
+      caseId: null
+  DecisionLogEntry:
+    logicalName: null
+    entitySetName: null
+    columns:
+      entryId: null
+      caseId: null
+      seq: null
+      timestamp: null
+      actorType: null
+      actorId: null
+      role: null
+      step: null
+      inputs: null
+      evidenceRefs: null
+      model: null
+      modelVersion: null
+      confidence: null
+      ruleResult: null
+      outcome: null
+      traceId: null
+choiceValues: null
+concurrency:
+  readHeader: "@odata.etag"
+  writeHeader: If-Match
+  rowVersionSource: null
+proposedResultStorage:
+  gapAnalysis: null
+  packageManifest: null
+  transitionOccurrenceId: null

@@ -1,0 +1,190 @@
+openapi: 3.1.0
+info:
+  title: Close-out governed API - draft
+  version: 0.1.0
+  description: >-
+    Review proposal, not a deployed API. No tenant-specific server or OAuth
+    endpoint is assumed. The generated self-contained OpenAPI artifact resolves
+    schema URNs for import. APIM validates Entra bearer tokens and trusted actor
+    scopes; request bodies never grant approval.
+security:
+  - EntraBearer: []
+paths:
+  /sites/{siteId}:
+    get:
+      operationId: get-site
+      description: Return only caller-authorized site/program data.
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema: {type: string, minLength: 1}
+      responses:
+        "200":
+          description: Authorized site view
+          content:
+            application/json:
+              schema: {$ref: "urn:close-out-demo:contracts:actions#/$defs/SiteView"}
+        default: {$ref: "#/components/responses/ActionError"}
+  /artifacts/{artifactId}/content:
+    get:
+      operationId: view-artifact
+      description: Authorize site/program and submitted-package scope before streaming Blob content.
+      parameters:
+        - name: artifactId
+          in: path
+          required: true
+          schema: {type: string, minLength: 1}
+      responses:
+        "200":
+          description: Authorized file bytes
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        default: {$ref: "#/components/responses/ActionError"}
+  /uploads:
+    post:
+      operationId: upload-evidence
+      description: >-
+        Proposed multipart boundary. Metadata is JSON; uploader identity is
+        derived from authentication. Upload deduplication semantics require review.
+      parameters:
+        - {$ref: "#/components/parameters/CaseId"}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, metadata]
+              properties:
+                file: {type: string, format: binary}
+                metadata: {$ref: "urn:close-out-demo:contracts:actions#/$defs/UploadMetadata"}
+            encoding:
+              metadata: {contentType: application/json}
+      responses:
+        "201":
+          description: Created logical metadata; processing is asynchronous
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - {$ref: "urn:close-out-demo:contracts:models#/$defs/Photo"}
+                  - {$ref: "urn:close-out-demo:contracts:models#/$defs/AcceptanceArtifact"}
+        default: {$ref: "#/components/responses/ActionError"}
+  /actions/create-rework-work-order:
+    post:
+      operationId: create-rework-work-order
+      description: Re-read trusted ReworkApproved decision and policy evidence before mutation.
+      parameters:
+        - {$ref: "#/components/parameters/IdempotencyKey"}
+        - {$ref: "#/components/parameters/RequiredCaseId"}
+        - {$ref: "#/components/parameters/IfMatch"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "urn:close-out-demo:contracts:actions#/$defs/CreateReworkRequest"}
+      responses:
+        "200": {$ref: "#/components/responses/Receipt"}
+        default: {$ref: "#/components/responses/ActionError"}
+  /actions/close-rework-work-order:
+    post:
+      operationId: close-rework-work-order
+      description: Reject execution until closure actor/policy is agreed and accepted current evidence is verified.
+      parameters:
+        - {$ref: "#/components/parameters/IdempotencyKey"}
+        - {$ref: "#/components/parameters/RequiredCaseId"}
+        - {$ref: "#/components/parameters/IfMatch"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "urn:close-out-demo:contracts:actions#/$defs/CloseReworkRequest"}
+      responses:
+        "200": {$ref: "#/components/responses/Receipt"}
+        default: {$ref: "#/components/responses/ActionError"}
+  /actions/close-punch-list-item:
+    post:
+      operationId: close-punch-list-item
+      description: Verify closure actor/policy, site scope, current accepted photo and target version.
+      parameters:
+        - {$ref: "#/components/parameters/IdempotencyKey"}
+        - {$ref: "#/components/parameters/RequiredCaseId"}
+        - {$ref: "#/components/parameters/IfMatch"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "urn:close-out-demo:contracts:actions#/$defs/ClosePunchListRequest"}
+      responses:
+        "200": {$ref: "#/components/responses/Receipt"}
+        default: {$ref: "#/components/responses/ActionError"}
+  /actions/submit-closeout:
+    post:
+      operationId: submit-closeout
+      description: Re-read trusted SubmissionApproved decision, readiness and package before writing the milestone.
+      parameters:
+        - {$ref: "#/components/parameters/IdempotencyKey"}
+        - {$ref: "#/components/parameters/RequiredCaseId"}
+        - {$ref: "#/components/parameters/IfMatch"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "urn:close-out-demo:contracts:actions#/$defs/SubmitCloseoutRequest"}
+      responses:
+        "200": {$ref: "#/components/responses/Receipt"}
+        default: {$ref: "#/components/responses/ActionError"}
+components:
+  securitySchemes:
+    EntraBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: TODO(verify) issuer, audience, app roles and delegated scopes per environment.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >-
+        caseId plus transition. Replays return the original durable receipt;
+        same key with changed logical input returns 409. Occurrence/action
+        discrimination for repeated transitions requires owner agreement.
+      schema: {type: string, minLength: 1}
+    CaseId:
+      name: x-case-id
+      in: header
+      required: false
+      description: Omit before case creation; otherwise match metadata caseId.
+      schema: {type: string, format: uuid}
+    RequiredCaseId:
+      name: x-case-id
+      in: header
+      required: true
+      description: Must match the body's caseId and authorized record.
+      schema: {type: string, format: uuid}
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: >-
+        Optional header representation of the required expectedVersion body
+        field; if both are supplied they must agree. Stale versions return 412.
+        No wildcard overwrite. ETag encoding and creation target require review.
+      schema: {type: string, minLength: 1}
+  responses:
+    Receipt:
+      description: Completed action or replay of its original durable receipt
+      content:
+        application/json:
+          schema: {$ref: "urn:close-out-demo:contracts:actions#/$defs/ActionReceipt"}
+    ActionError:
+      description: >-
+        Structured error. Proposed statuses: 400 invalid input, 401 unauthenticated,
+        403 forbidden, 404 missing resource, 409 key conflict, 412 stale version,
+        503 transient dependency failure. No confidential details in messages.
+      content:
+        application/json:
+          schema: {$ref: "urn:close-out-demo:contracts:actions#/$defs/ActionError"}

@@ -1,0 +1,34 @@
+status: synthetic-extract-only
+notes: Apply only after canonical seed validation. These are deliberately invalid source rows, not producer-contract examples.
+operations:
+  - objectType: Site
+    id: SE-STO-0042
+    duplicate: true
+    changes:
+      siteId: SE-STO-DUP-0042
+      sourceSiteIds: [SYNTH-CONFLICTING-0042]
+      siteName: Synthetic Stockholm duplicate candidate
+  - objectType: Milestone
+    id: STO42-CC
+    changes:
+      status: Planned
+      actualDate: null
+      isStale: true
+      sourceUpdatedAt: "2026-10-20T09:00:00Z"
+  - objectType: Photo
+    id: GOT17-PHOTO-01
+    changes:
+      latitude: 10
+      longitude: 10
+  - objectType: Ticket
+    id: PL-0017-02
+    changes:
+      siteId: null
+  - objectType: WorkOrder
+    id: STO42-INSTALL
+    changes:
+      subcontractorSourceName: Synthetic Crew One
+  - objectType: WorkOrder
+    id: GOT17-INSTALL
+    changes:
+      subcontractorSourceName: SYNTH CREW 1

@@ -1,0 +1,92 @@
+{
+  "PhotoUploaded": {
+    "schemaVersion": "0.1.0", "eventType": "PhotoUploaded",
+    "eventId": "3fc8ac41-f6d3-40ef-a435-777921e20a01", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "siteId": "SE-STO-0042", "occurredAt": "2026-10-27T08:30:00Z", "producer": "azure.api",
+    "data": {
+      "photoId": "PHOTO-19", "artifactId": "ART-0042-PHOTOS", "siteId": "SE-STO-0042",
+      "checklistItemCode": "grounding", "sector": null, "blobUrl": "https://storage.example.invalid/photos/PHOTO-19.jpg",
+      "latitude": 59.3293, "longitude": 18.0686, "capturedAt": "2026-10-27T08:20:00Z",
+      "uploadedBy": "synthetic-technician", "replacesPhotoId": null, "isCurrent": true
+    }
+  },
+  "ArtifactUploaded": {
+    "schemaVersion": "0.1.0", "eventType": "ArtifactUploaded",
+    "eventId": "3fc8ac41-f6d3-40ef-a435-777921e20a02", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "siteId": "SE-STO-0042", "occurredAt": "2026-10-27T08:30:00Z", "producer": "azure.api",
+    "data": {
+      "artifactId": "ART-0042-RFDS", "siteId": "SE-STO-0042", "requirementId": "REQ-A-RFDS",
+      "artifactType": "rfds", "status": "Submitted", "blobUrl": "https://storage.example.invalid/documents/RFDS-0042.pdf",
+      "version": "1", "submittedBy": "synthetic-technician", "submittedAt": "2026-10-27T08:30:00Z",
+      "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc"
+    }
+  },
+  "ValidationResultCreated": {
+    "schemaVersion": "0.1.0", "eventType": "ValidationResultCreated",
+    "eventId": "3fc8ac41-f6d3-40ef-a435-777921e20a03", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "siteId": "SE-STO-0042", "occurredAt": "2026-10-27T09:00:00Z", "producer": "azure.validation",
+    "data": {
+      "validationResultId": "VR-PHOTO-20-1", "photoId": "PHOTO-20", "checklistItemCode": "azimuth_sector_b",
+      "compliant": false, "confidence": 0.94, "findings": ["Planned 120 degrees; measured 127 degrees; deviation 7 degrees"],
+      "rfdsArtifactId": "ART-0042-RFDS", "rfdsReference": "Sector B azimuth 120 degrees",
+      "reviewStatus": "Auto", "validatedBy": "synthetic-validator",
+      "model": "fixture-only", "modelVersion": "fixture-only", "validatedAt": "2026-10-27T09:00:00Z",
+      "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc"
+    }
+  },
+  "ValidationResultReviewed": {
+    "schemaVersion": "0.1.0", "eventType": "ValidationResultReviewed",
+    "eventId": "3fc8ac41-f6d3-40ef-a435-777921e20a04", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "siteId": "SE-STO-0042", "occurredAt": "2026-10-27T10:30:00Z", "producer": "azure.review-adapter",
+    "data": {
+      "validationResult": {
+        "validationResultId": "VR-PHOTO-19b-1", "photoId": "PHOTO-19b", "checklistItemCode": "grounding",
+        "compliant": true, "confidence": 0.71, "findings": [], "rfdsArtifactId": null, "rfdsReference": null,
+        "reviewStatus": "Confirmed", "validatedBy": "synthetic-reviewer",
+        "model": "fixture-only", "modelVersion": "fixture-only", "validatedAt": "2026-10-27T10:25:00Z",
+        "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc"
+      },
+      "decisionEntryId": "f6950cf0-dcd3-45a2-a250-e6db2f884cd7"
+    }
+  },
+  "WorkOrderChanged": {
+    "schemaVersion": "0.1.0", "eventType": "WorkOrderChanged",
+    "eventId": "3fc8ac41-f6d3-40ef-a435-777921e20a05", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "siteId": "SE-STO-0042", "occurredAt": "2026-10-27T10:00:00Z", "producer": "azure.mock-sor",
+    "data": {
+      "workOrderId": "WO-0042-R1", "siteId": "SE-STO-0042", "subcontractorId": "SYNTH-CREW-01",
+      "workOrderType": "Rework", "status": "Open", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+      "reason": "Correct grounding and sector B evidence", "createdAt": "2026-10-27T10:00:00Z",
+      "dueDate": null, "closedAt": null, "version": "1"
+    }
+  },
+  "TicketChanged": {
+    "schemaVersion": "0.1.0", "eventType": "TicketChanged",
+    "eventId": "3fc8ac41-f6d3-40ef-a435-777921e20a06", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "siteId": "SE-STO-0042", "occurredAt": "2026-10-27T10:35:00Z", "producer": "azure.mock-sor",
+    "data": {
+      "ticketId": "PL-0042-01", "siteId": "SE-STO-0042", "ticketType": "PunchList", "blocking": true,
+      "status": "Closed", "description": "Cable labelling sector B missing", "checklistItemCode": "cabling",
+      "openedAt": "2026-10-27T08:00:00Z", "closedAt": "2026-10-27T10:35:00Z", "closingPhotoId": "PHOTO-PL-0042-01-AFTER"
+    }
+  },
+  "MilestoneChanged": {
+    "schemaVersion": "0.1.0", "eventType": "MilestoneChanged",
+    "eventId": "3fc8ac41-f6d3-40ef-a435-777921e20a07", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "siteId": "SE-STO-0042", "occurredAt": "2026-10-27T11:00:00Z", "producer": "azure.mock-sor",
+    "data": {
+      "milestoneId": "MS-0042-SUBMITTED", "siteId": "SE-STO-0042", "projectId": "PROJECT-A",
+      "milestoneType": "CloseOutSubmitted", "status": "Actualized", "plannedDate": null,
+      "actualDate": "2026-10-27T11:00:00Z", "sourceUpdatedAt": "2026-10-27T11:00:00Z", "isStale": false
+    }
+  },
+  "CloseOutCaseChanged": {
+    "schemaVersion": "0.1.0", "eventType": "CloseOutCaseChanged",
+    "eventId": "3fc8ac41-f6d3-40ef-a435-777921e20a08", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "siteId": "SE-STO-0042", "occurredAt": "2026-10-27T09:45:00Z", "producer": "azure.dataverse-adapter",
+    "data": {
+      "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+      "status": "Blocked", "statusReason": "ReworkApproved", "rowVersion": "W/\"12345\""
+    }
+  }
+}

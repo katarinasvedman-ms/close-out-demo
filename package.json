@@ -1,0 +1,22 @@
+{
+  "name": "close-out-demo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "src/presenter"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspace @close-out/presenter",
+    "typecheck": "npm run typecheck --workspace @close-out/presenter",
+    "test": "npm run test --workspace @close-out/presenter",
+    "build": "npm run build --workspace @close-out/presenter",
+    "contracts:generate": "uv run --frozen --extra dev python -m shared.contract_generation",
+    "contracts:check": "uv run --frozen --extra dev python -m shared.contract_validation && uv run --frozen --extra dev python -m shared.contract_generation --check && uv run --frozen --extra dev python -m shared.contract_compatibility"
+  },
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "15.0.4"
+  }
+}

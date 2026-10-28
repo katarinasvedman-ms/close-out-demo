@@ -1,0 +1,16 @@
+{
+  "ArtifactType": "photo_pack",
+  "ChecklistItemCode": "grounding",
+  "MilestoneType": "ConstructionComplete",
+  "MilestoneStatus": "Actualized",
+  "WorkOrderType": "Rework",
+  "WorkOrderStatus": "Open",
+  "TicketType": "PunchList",
+  "TicketStatus": "Open",
+  "ArtifactStatus": "Submitted",
+  "ReviewStatus": "NeedsReview",
+  "Readiness": "Blocked",
+  "CloseOutStatus": "Blocked",
+  "StatusReason": "MissingEvidence",
+  "ActorType": "agent"
+}

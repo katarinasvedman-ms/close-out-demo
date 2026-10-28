@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:models",
+  "title": "SharedObject",
+  "description": "Draft logical objects, not physical Dataverse column names. Lifecycle nullability and auxiliary structures require owner review.",
+  "anyOf": [
+    { "$ref": "#/$defs/CustomerProject" }, { "$ref": "#/$defs/ArtifactRequirement" },
+    { "$ref": "#/$defs/ChecklistItem" }, { "$ref": "#/$defs/Site" },
+    { "$ref": "#/$defs/Milestone" }, { "$ref": "#/$defs/Subcontractor" },
+    { "$ref": "#/$defs/WorkOrder" }, { "$ref": "#/$defs/Ticket" },
+    { "$ref": "#/$defs/AcceptanceArtifact" }, { "$ref": "#/$defs/Photo" },
+    { "$ref": "#/$defs/ValidationResult" }, { "$ref": "#/$defs/CloseOutCase" },
+    { "$ref": "#/$defs/DecisionLogEntry" }, { "$ref": "#/$defs/EntityMatchCandidate" }
+  ],
+  "$defs": {
+    "CustomerProject": {
+      "title": "CustomerProject", "type": "object",
+      "required": ["projectId", "programCode", "customerName", "customerId", "market", "lowConfidenceThreshold"],
+      "properties": {
+        "projectId": { "type": "string", "minLength": 1 },
+        "programCode": { "type": "string", "minLength": 1 },
+        "customerName": { "type": "string", "minLength": 1 },
+        "customerId": { "type": "string", "minLength": 1 },
+        "market": { "type": "string", "enum": ["SE", "NO"] },
+        "lowConfidenceThreshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      }, "additionalProperties": true
+    },
+    "ArtifactRequirement": {
+      "title": "ArtifactRequirement", "type": "object",
+      "required": ["requirementId", "projectId", "artifactType", "mandatory", "phase"],
+      "properties": {
+        "requirementId": { "type": "string", "minLength": 1 },
+        "projectId": { "type": "string", "minLength": 1 },
+        "artifactType": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ArtifactType" },
+        "mandatory": { "type": "boolean" },
+        "phase": { "type": "string", "enum": ["close_out"] }
+      }, "additionalProperties": true
+    },
+    "ChecklistItem": {
+      "title": "ChecklistItem", "type": "object",
+      "required": ["checklistItemId", "requirementId", "itemCode", "description", "mandatory", "rfdsCheck"],
+      "properties": {
+        "checklistItemId": { "type": "string", "minLength": 1 },
+        "requirementId": { "type": "string", "minLength": 1 },
+        "itemCode": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ChecklistItemCode" },
+        "description": { "type": "string", "minLength": 1 },
+        "mandatory": { "type": "boolean" },
+        "rfdsCheck": { "type": "boolean" }
+      }, "additionalProperties": true
+    },
+    "Site": {
+      "title": "Site", "type": "object",
+      "required": ["siteId", "siteName", "sourceSiteIds", "projectId", "market", "latitude", "longitude", "siteType", "currentPhase", "readiness", "readinessMissing", "readinessEvaluatedAt"],
+      "properties": {
+        "siteId": { "type": "string", "minLength": 1 },
+        "siteName": { "type": "string", "minLength": 1 },
+        "sourceSiteIds": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "projectId": { "type": "string", "minLength": 1 },
+        "market": { "type": "string", "enum": ["SE", "NO"] },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "siteType": { "type": "string", "minLength": 1 },
+        "currentPhase": { "type": "string", "minLength": 1 },
+        "readiness": { "$ref": "urn:close-out-demo:contracts:codes#/properties/Readiness" },
+        "readinessMissing": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "readinessEvaluatedAt": { "type": ["string", "null"], "format": "date-time" }
+      }, "additionalProperties": true
+    },
+    "Milestone": {
+      "title": "Milestone", "type": "object",
+      "required": ["milestoneId", "siteId", "projectId", "milestoneType", "status", "plannedDate", "actualDate", "sourceUpdatedAt", "isStale"],
+      "properties": {
+        "milestoneId": { "type": "string", "minLength": 1 },
+        "siteId": { "type": "string", "minLength": 1 },
+        "projectId": { "type": "string", "minLength": 1 },
+        "milestoneType": { "$ref": "urn:close-out-demo:contracts:codes#/properties/MilestoneType" },
+        "status": { "$ref": "urn:close-out-demo:contracts:codes#/properties/MilestoneStatus" },
+        "plannedDate": { "type": ["string", "null"], "format": "date-time" },
+        "actualDate": { "type": ["string", "null"], "format": "date-time" },
+        "sourceUpdatedAt": { "type": "string", "format": "date-time" },
+        "isStale": { "type": "boolean" }
+      }, "additionalProperties": true
+    },
+    "Subcontractor": {
+      "title": "Subcontractor", "type": "object",
+      "required": ["subcontractorId", "name", "normalizedName", "sourceNames"],
+      "properties": {
+        "subcontractorId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "normalizedName": { "type": "string", "minLength": 1 },
+        "sourceNames": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }, "additionalProperties": true
+    },
+    "WorkOrder": {
+      "title": "WorkOrder", "type": "object",
+      "required": ["workOrderId", "siteId", "subcontractorId", "workOrderType", "status", "caseId", "reason", "createdAt", "dueDate", "closedAt", "version"],
+      "properties": {
+        "workOrderId": { "type": "string", "minLength": 1 },
+        "siteId": { "type": "string", "minLength": 1 },
+        "subcontractorId": { "type": "string", "minLength": 1 },
+        "workOrderType": { "$ref": "urn:close-out-demo:contracts:codes#/properties/WorkOrderType" },
+        "status": { "$ref": "urn:close-out-demo:contracts:codes#/properties/WorkOrderStatus" },
+        "caseId": { "type": ["string", "null"], "format": "uuid" },
+        "reason": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "dueDate": { "type": ["string", "null"], "format": "date-time" },
+        "closedAt": { "type": ["string", "null"], "format": "date-time" },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [{
+        "if": { "properties": { "workOrderType": { "const": "Rework" } }, "required": ["workOrderType"] },
+        "then": { "properties": { "caseId": { "type": "string", "format": "uuid" } } }
+      }], "additionalProperties": true
+    },
+    "Ticket": {
+      "title": "Ticket", "type": "object",
+      "required": ["ticketId", "siteId", "ticketType", "blocking", "status", "description", "checklistItemCode", "openedAt", "closedAt", "closingPhotoId"],
+      "properties": {
+        "ticketId": { "type": "string", "minLength": 1 },
+        "siteId": { "type": "string", "minLength": 1 },
+        "ticketType": { "$ref": "urn:close-out-demo:contracts:codes#/properties/TicketType" },
+        "blocking": { "type": "boolean" },
+        "status": { "$ref": "urn:close-out-demo:contracts:codes#/properties/TicketStatus" },
+        "description": { "type": "string", "minLength": 1 },
+        "checklistItemCode": { "anyOf": [{ "$ref": "urn:close-out-demo:contracts:codes#/properties/ChecklistItemCode" }, { "type": "null" }] },
+        "openedAt": { "type": "string", "format": "date-time" },
+        "closedAt": { "type": ["string", "null"], "format": "date-time" },
+        "closingPhotoId": { "type": ["string", "null"] }
+      }, "additionalProperties": true
+    },
+    "AcceptanceArtifact": {
+      "title": "AcceptanceArtifact", "type": "object",
+      "required": ["artifactId", "siteId", "requirementId", "artifactType", "status", "blobUrl", "version", "submittedBy", "submittedAt", "caseId"],
+      "properties": {
+        "artifactId": { "type": "string", "minLength": 1 },
+        "siteId": { "type": "string", "minLength": 1 },
+        "requirementId": { "type": ["string", "null"] },
+        "artifactType": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ArtifactType" },
+        "status": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ArtifactStatus" },
+        "blobUrl": { "type": ["string", "null"], "format": "uri" },
+        "version": { "type": "string", "minLength": 1 },
+        "submittedBy": { "type": ["string", "null"] },
+        "submittedAt": { "type": ["string", "null"], "format": "date-time" },
+        "caseId": { "type": ["string", "null"], "format": "uuid" }
+      }, "additionalProperties": true
+    },
+    "Photo": {
+      "title": "Photo", "type": "object",
+      "required": ["photoId", "artifactId", "siteId", "checklistItemCode", "sector", "blobUrl", "latitude", "longitude", "capturedAt", "uploadedBy", "replacesPhotoId", "isCurrent"],
+      "properties": {
+        "photoId": { "type": "string", "minLength": 1 },
+        "artifactId": { "type": "string", "minLength": 1 },
+        "siteId": { "type": "string", "minLength": 1 },
+        "checklistItemCode": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ChecklistItemCode" },
+        "sector": { "type": ["string", "null"] },
+        "blobUrl": { "type": "string", "format": "uri" },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "capturedAt": { "type": "string", "format": "date-time" },
+        "uploadedBy": { "type": "string", "minLength": 1 },
+        "replacesPhotoId": { "type": ["string", "null"] },
+        "isCurrent": { "type": "boolean" }
+      }, "additionalProperties": true
+    },
+    "ValidationResult": {
+      "title": "ValidationResult", "type": "object",
+      "required": ["validationResultId", "checklistItemCode", "compliant", "confidence", "findings", "rfdsArtifactId", "rfdsReference", "reviewStatus", "validatedBy", "model", "modelVersion", "validatedAt", "caseId"],
+      "properties": {
+        "validationResultId": { "type": "string", "minLength": 1 },
+        "photoId": { "type": "string", "minLength": 1 },
+        "artifactId": { "type": "string", "minLength": 1 },
+        "checklistItemCode": { "anyOf": [{ "$ref": "urn:close-out-demo:contracts:codes#/properties/ChecklistItemCode" }, { "type": "null" }] },
+        "compliant": { "type": "boolean" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "findings": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "rfdsArtifactId": { "type": ["string", "null"] },
+        "rfdsReference": { "type": ["string", "null"] },
+        "reviewStatus": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ReviewStatus" },
+        "validatedBy": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "modelVersion": { "type": "string", "minLength": 1 },
+        "validatedAt": { "type": "string", "format": "date-time" },
+        "caseId": { "type": ["string", "null"], "format": "uuid" }
+      },
+      "oneOf": [
+        { "type": "object", "required": ["photoId"], "properties": { "photoId": { "type": "string", "minLength": 1 } } },
+        { "type": "object", "required": ["artifactId"], "properties": { "artifactId": { "type": "string", "minLength": 1 } } }
+      ], "additionalProperties": true
+    },
+    "ApprovalDecision": {
+      "title": "ApprovalDecision", "type": "object",
+      "description": "Proposed logical decision structure; physical Dataverse mapping and trusted provenance require Henrik's confirmation.",
+      "required": ["outcome", "actorType", "actorId", "decidedAt", "policyVersion"],
+      "properties": {
+        "outcome": { "type": "string", "enum": ["Approved", "Rejected"] },
+        "actorType": { "type": "string", "enum": ["user", "policy"] },
+        "actorId": { "type": "string", "minLength": 1 },
+        "decidedAt": { "type": "string", "format": "date-time" },
+        "policyVersion": { "type": "string", "minLength": 1 },
+        "comment": { "type": "string" }
+      }, "additionalProperties": true
+    },
+    "CloseOutCase": {
+      "title": "CloseOutCase", "type": "object",
+      "required": ["caseId", "siteId", "status", "statusReason", "bpfStage", "reworkDecision", "reworkPolicyVersion", "submissionDecision", "packageArtifactId", "createdAt", "submittedAt", "acceptedAt", "slaDueAt"],
+      "properties": {
+        "caseId": { "type": "string", "format": "uuid" },
+        "siteId": { "type": "string", "minLength": 1 },
+        "status": { "$ref": "urn:close-out-demo:contracts:codes#/properties/CloseOutStatus" },
+        "statusReason": { "$ref": "urn:close-out-demo:contracts:codes#/properties/StatusReason" },
+        "bpfStage": { "type": "string", "minLength": 1 },
+        "reworkDecision": { "anyOf": [{ "$ref": "#/$defs/ApprovalDecision" }, { "type": "null" }] },
+        "reworkPolicyVersion": { "type": ["string", "null"] },
+        "submissionDecision": { "anyOf": [{ "$ref": "#/$defs/ApprovalDecision" }, { "type": "null" }] },
+        "packageArtifactId": { "type": ["string", "null"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "submittedAt": { "type": ["string", "null"], "format": "date-time" },
+        "acceptedAt": { "type": ["string", "null"], "format": "date-time" },
+        "slaDueAt": { "type": ["string", "null"], "format": "date-time" }
+      }, "additionalProperties": true
+    },
+    "EvidenceRef": {
+      "title": "EvidenceRef", "type": "object",
+      "description": "Proposed version-aware citation, not a SAS token or embedded document.",
+      "required": ["objectType", "id"],
+      "properties": {
+        "objectType": { "type": "string", "enum": ["Photo", "AcceptanceArtifact", "ValidationResult", "Ticket", "WorkOrder", "Milestone", "ChecklistItem", "ArtifactRequirement"] },
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }, "additionalProperties": true
+    },
+    "DecisionLogEntry": {
+      "title": "DecisionLogEntry", "type": "object",
+      "required": ["entryId", "caseId", "seq", "timestamp", "actorType", "actorId", "role", "step", "inputs", "evidenceRefs", "model", "modelVersion", "confidence", "ruleResult", "outcome", "traceId"],
+      "properties": {
+        "entryId": { "type": "string", "format": "uuid" },
+        "caseId": { "type": "string", "format": "uuid" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "actorType": { "$ref": "urn:close-out-demo:contracts:codes#/properties/ActorType" },
+        "actorId": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "step": { "type": "string", "minLength": 1 },
+        "inputs": { "type": "object" },
+        "evidenceRefs": { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" } },
+        "model": { "type": ["string", "null"] },
+        "modelVersion": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "ruleResult": { "type": ["string", "null"] },
+        "outcome": { "type": "string", "minLength": 1 },
+        "traceId": { "type": "string", "pattern": "^[0-9a-f]{32}$" }
+      }, "additionalProperties": true
+    },
+    "EntityMatchCandidate": {
+      "title": "EntityMatchCandidate", "type": "object",
+      "required": ["candidateId", "entityType", "candidateIds", "matchConfidence", "matchReasons", "status", "decidedBy", "decidedAt", "survivorId"],
+      "properties": {
+        "candidateId": { "type": "string", "minLength": 1 },
+        "entityType": { "type": "string", "minLength": 1 },
+        "candidateIds": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "matchConfidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "matchReasons": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["Pending", "Merged", "Rejected"] },
+        "decidedBy": { "type": ["string", "null"] },
+        "decidedAt": { "type": ["string", "null"], "format": "date-time" },
+        "survivorId": { "type": ["string", "null"] }
+      }, "additionalProperties": true
+    }
+  }
+}

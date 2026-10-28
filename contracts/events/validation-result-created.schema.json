@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:validation-result-created",
+  "title": "ValidationResultCreated",
+  "allOf": [{ "$ref": "urn:close-out-demo:contracts:event-envelope" }],
+  "type": "object",
+  "properties": {
+    "eventType": { "const": "ValidationResultCreated" },
+    "data": { "$ref": "urn:close-out-demo:contracts:models#/$defs/ValidationResult" }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "ActionContext": {
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+    "transition": "ReworkApproved->ReworkOrdered", "expectedVersion": "1"
+  },
+  "CreateReworkRequest": {
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+    "transition": "ReworkApproved->ReworkOrdered", "expectedVersion": "1",
+    "subcontractorId": "SYNTH-CREW-01", "reason": "Correct grounding and sector B evidence",
+    "validationResultIds": ["VR-PHOTO-19-1", "VR-PHOTO-20-1"], "ticketIds": ["PL-0042-01"],
+    "approvalEntryId": "f6950cf0-dcd3-45a2-a250-e6db2f884cd7"
+  },
+  "CloseReworkRequest": {
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+    "transition": "close-rework-work-order", "expectedVersion": "1", "workOrderId": "WO-0042-R1",
+    "evidenceRefs": [{ "objectType": "Photo", "id": "PHOTO-19b", "version": "1" }, { "objectType": "Photo", "id": "PHOTO-20b", "version": "1" }]
+  },
+  "ClosePunchListRequest": {
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+    "transition": "close-punch-list-item", "expectedVersion": "1",
+    "ticketId": "PL-0042-01", "closingPhotoId": "PHOTO-PL-0042-01-AFTER"
+  },
+  "SubmitCloseoutRequest": {
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+    "transition": "SubmissionApproved->Submitted", "expectedVersion": "2",
+    "packageArtifactId": "PKG-0042-1", "approvalEntryId": "e989fc7f-1f54-4ccd-a5a2-906704b1848a"
+  },
+  "ActionReceipt": {
+    "receiptId": "21bba7da-2bcc-405b-a166-e4660f445915",
+    "idempotencyKey": "a698bbeb-54b3-4f82-ac9b-50540593affc:ReworkApproved->ReworkOrdered",
+    "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc", "siteId": "SE-STO-0042",
+    "action": "create-rework-work-order", "targetId": "WO-0042-R1", "targetVersion": "1",
+    "completedAt": "2026-10-27T10:00:00Z",
+    "evidenceRefs": [{ "objectType": "WorkOrder", "id": "WO-0042-R1", "version": "1" }]
+  },
+  "ActionError": {
+    "code": "VersionConflict", "message": "Re-read the target before reconsidering the action.",
+    "traceId": "11111111111111111111111111111111", "retryable": false
+  },
+  "SiteView": {
+    "site": {
+      "siteId": "SE-STO-0042", "siteName": "Synthetic Stockholm 0042", "sourceSiteIds": ["ST-0042"],
+      "projectId": "PROJECT-A", "market": "SE", "latitude": 59.3293, "longitude": 18.0686,
+      "siteType": "rooftop", "currentPhase": "close_out", "readiness": "Blocked",
+      "readinessMissing": ["CHECKLIST-A-GROUNDING", "CHECKLIST-A-AZIMUTH-B", "PL-0042-01"],
+      "readinessEvaluatedAt": "2026-10-27T09:00:01Z"
+    },
+    "milestones": [], "workOrders": [], "tickets": [], "artifacts": [], "photos": [], "validations": [], "activeCase": null
+  },
+  "UploadMetadata": {
+    "siteId": "SE-STO-0042", "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+    "requirementId": "REQ-A-PHOTOS", "artifactType": "photo_pack", "checklistItemCode": "grounding",
+    "sector": null, "latitude": 59.3293, "longitude": 18.0686,
+    "capturedAt": "2026-10-27T10:20:00Z", "replacesPhotoId": "PHOTO-19"
+  }
+}

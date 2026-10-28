@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:event-envelope",
+  "title": "EventEnvelope",
+  "description": "Draft common envelope; event-specific data must also validate against its own schema.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "eventType",
+    "eventId",
+    "caseId",
+    "siteId",
+    "occurredAt",
+    "producer",
+    "data"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "eventType": { "type": "string", "minLength": 1 },
+    "eventId": { "type": "string", "format": "uuid" },
+    "caseId": { "type": ["string", "null"], "format": "uuid" },
+    "siteId": { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "producer": { "type": "string", "minLength": 1 },
+    "data": { "type": "object" }
+  },
+  "additionalProperties": true
+}

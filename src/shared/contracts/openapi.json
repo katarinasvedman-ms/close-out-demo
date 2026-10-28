@@ -1,0 +1,2750 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Close-out governed API - draft",
+    "version": "0.1.0",
+    "description": "Review proposal, not a deployed API. No tenant-specific server or OAuth endpoint is assumed. The generated self-contained OpenAPI artifact resolves schema URNs for import. APIM validates Entra bearer tokens and trusted actor scopes; request bodies never grant approval."
+  },
+  "security": [
+    {
+      "EntraBearer": []
+    }
+  ],
+  "paths": {
+    "/sites/{siteId}": {
+      "get": {
+        "operationId": "get-site",
+        "description": "Return only caller-authorized site/program data.",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized site view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteView"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ActionError"
+          }
+        }
+      }
+    },
+    "/artifacts/{artifactId}/content": {
+      "get": {
+        "operationId": "view-artifact",
+        "description": "Authorize site/program and submitted-package scope before streaming Blob content.",
+        "parameters": [
+          {
+            "name": "artifactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized file bytes",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ActionError"
+          }
+        }
+      }
+    },
+    "/uploads": {
+      "post": {
+        "operationId": "upload-evidence",
+        "description": "Proposed multipart boundary. Metadata is JSON; uploader identity is derived from authentication. Upload deduplication semantics require review.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CaseId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "metadata"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "metadata": {
+                    "$ref": "#/components/schemas/UploadMetadata"
+                  }
+                }
+              },
+              "encoding": {
+                "metadata": {
+                  "contentType": "application/json"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created logical metadata; processing is asynchronous",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Photo"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AcceptanceArtifact"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ActionError"
+          }
+        }
+      }
+    },
+    "/actions/create-rework-work-order": {
+      "post": {
+        "operationId": "create-rework-work-order",
+        "description": "Re-read trusted ReworkApproved decision and policy evidence before mutation.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/RequiredCaseId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReworkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Receipt"
+          },
+          "default": {
+            "$ref": "#/components/responses/ActionError"
+          }
+        }
+      }
+    },
+    "/actions/close-rework-work-order": {
+      "post": {
+        "operationId": "close-rework-work-order",
+        "description": "Reject execution until closure actor/policy is agreed and accepted current evidence is verified.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/RequiredCaseId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseReworkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Receipt"
+          },
+          "default": {
+            "$ref": "#/components/responses/ActionError"
+          }
+        }
+      }
+    },
+    "/actions/close-punch-list-item": {
+      "post": {
+        "operationId": "close-punch-list-item",
+        "description": "Verify closure actor/policy, site scope, current accepted photo and target version.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/RequiredCaseId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClosePunchListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Receipt"
+          },
+          "default": {
+            "$ref": "#/components/responses/ActionError"
+          }
+        }
+      }
+    },
+    "/actions/submit-closeout": {
+      "post": {
+        "operationId": "submit-closeout",
+        "description": "Re-read trusted SubmissionApproved decision, readiness and package before writing the milestone.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/RequiredCaseId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitCloseoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Receipt"
+          },
+          "default": {
+            "$ref": "#/components/responses/ActionError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "EntraBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "TODO(verify) issuer, audience, app roles and delegated scopes per environment."
+      }
+    },
+    "parameters": {
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "description": "caseId plus transition. Replays return the original durable receipt; same key with changed logical input returns 409. Occurrence/action discrimination for repeated transitions requires owner agreement.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "CaseId": {
+        "name": "x-case-id",
+        "in": "header",
+        "required": false,
+        "description": "Omit before case creation; otherwise match metadata caseId.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "RequiredCaseId": {
+        "name": "x-case-id",
+        "in": "header",
+        "required": true,
+        "description": "Must match the body's caseId and authorized record.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "IfMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": false,
+        "description": "Optional header representation of the required expectedVersion body field; if both are supplied they must agree. Stale versions return 412. No wildcard overwrite. ETag encoding and creation target require review.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "responses": {
+      "Receipt": {
+        "description": "Completed action or replay of its original durable receipt",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ActionReceipt"
+            }
+          }
+        }
+      },
+      "ActionError": {
+        "description": "Structured error. Proposed statuses: 400 invalid input, 401 unauthenticated, 403 forbidden, 404 missing resource, 409 key conflict, 412 stale version, 503 transient dependency failure. No confidential details in messages.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ActionError"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ReadinessSignal": {
+        "title": "ReadinessSignal",
+        "description": "Draft body of the Activator to Power Automate signal, not the event/message envelope.",
+        "type": "object",
+        "required": [
+          "caseId",
+          "siteId",
+          "readiness",
+          "readinessMissing",
+          "evaluatedAt"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "readiness": {
+            "type": "string",
+            "enum": [
+              "Blocked",
+              "Ready"
+            ]
+          },
+          "readinessMissing": {
+            "description": "Proposed condition ID list; detailed shape requires cross-track agreement.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "evaluatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "readiness": {
+                  "const": "Ready"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "readinessMissing": {
+                  "type": "array",
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ],
+        "additionalProperties": true
+      },
+      "AgentOutput": {
+        "title": "AgentOutput",
+        "description": "Proposed agent outputs are recommendations/manifests, never approval or execution authority.",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/GapAnalysis"
+          },
+          {
+            "$ref": "#/components/schemas/PackageManifest"
+          }
+        ]
+      },
+      "Gap": {
+        "title": "Gap",
+        "type": "object",
+        "required": [
+          "conditionType",
+          "conditionId",
+          "reason",
+          "evidenceRefs"
+        ],
+        "properties": {
+          "conditionType": {
+            "type": "string",
+            "enum": [
+              "ChecklistItem",
+              "ArtifactRequirement",
+              "Ticket",
+              "WorkOrder"
+            ]
+          },
+          "conditionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "ReworkProposal": {
+        "title": "ReworkProposal",
+        "type": "object",
+        "required": [
+          "reason",
+          "validationResultIds",
+          "ticketIds"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subcontractorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "validationResultIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "ticketIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "GapAnalysis": {
+        "title": "GapAnalysis",
+        "type": "object",
+        "required": [
+          "caseId",
+          "siteId",
+          "generatedAt",
+          "model",
+          "modelVersion",
+          "gaps",
+          "proposedRework"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modelVersion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Gap"
+            }
+          },
+          "proposedRework": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReworkProposal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "PackageFile": {
+        "title": "PackageFile",
+        "type": "object",
+        "required": [
+          "format",
+          "blobUrl"
+        ],
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "docx",
+              "pdf"
+            ]
+          },
+          "blobUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "additionalProperties": true
+      },
+      "PackageManifest": {
+        "title": "PackageManifest",
+        "type": "object",
+        "description": "Manifest must be checked against current accepted evidence before PackageReady. File conversion and Dataverse storage are not yet agreed.",
+        "required": [
+          "artifactId",
+          "caseId",
+          "siteId",
+          "createdAt",
+          "model",
+          "modelVersion",
+          "evidenceRefs",
+          "files"
+        ],
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modelVersion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            }
+          },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/PackageFile"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "BusinessAction": {
+        "title": "BusinessAction",
+        "description": "Proposed APIM boundaries. Inputs are untrusted: the executor must re-read trusted approval/evidence and target versions.",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/CreateReworkRequest"
+          },
+          {
+            "$ref": "#/components/schemas/CloseReworkRequest"
+          },
+          {
+            "$ref": "#/components/schemas/ClosePunchListRequest"
+          },
+          {
+            "$ref": "#/components/schemas/SubmitCloseoutRequest"
+          },
+          {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          {
+            "$ref": "#/components/schemas/ActionError"
+          },
+          {
+            "$ref": "#/components/schemas/SiteView"
+          },
+          {
+            "$ref": "#/components/schemas/UploadMetadata"
+          }
+        ]
+      },
+      "ActionContext": {
+        "title": "ActionContext",
+        "type": "object",
+        "required": [
+          "caseId",
+          "siteId",
+          "transition",
+          "expectedVersion"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "transition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expectedVersion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque target SoR version, not the Dataverse rowVersion. Target for creation needs owner agreement."
+          },
+          "transitionOccurrenceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional proposal for repeated transitions; key composition requires all-track review."
+          }
+        },
+        "additionalProperties": true
+      },
+      "CreateReworkRequest": {
+        "title": "CreateReworkRequest",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ActionContext"
+          }
+        ],
+        "required": [
+          "subcontractorId",
+          "reason",
+          "validationResultIds",
+          "ticketIds",
+          "approvalEntryId"
+        ],
+        "properties": {
+          "subcontractorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "validationResultIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "ticketIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "approvalEntryId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": true
+      },
+      "CloseReworkRequest": {
+        "title": "CloseReworkRequest",
+        "type": "object",
+        "description": "Closure authorization source/trigger is unresolved; evidence alone is not approval.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ActionContext"
+          }
+        ],
+        "required": [
+          "workOrderId",
+          "evidenceRefs"
+        ],
+        "properties": {
+          "workOrderId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "ClosePunchListRequest": {
+        "title": "ClosePunchListRequest",
+        "type": "object",
+        "description": "Closing photo must be authorized, current and accepted; closure actor/policy needs owner agreement.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ActionContext"
+          }
+        ],
+        "required": [
+          "ticketId",
+          "closingPhotoId"
+        ],
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "closingPhotoId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      },
+      "SubmitCloseoutRequest": {
+        "title": "SubmitCloseoutRequest",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ActionContext"
+          }
+        ],
+        "required": [
+          "packageArtifactId",
+          "approvalEntryId"
+        ],
+        "properties": {
+          "packageArtifactId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "approvalEntryId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ActionReceipt": {
+        "title": "ActionReceipt",
+        "type": "object",
+        "required": [
+          "receiptId",
+          "idempotencyKey",
+          "caseId",
+          "siteId",
+          "action",
+          "targetId",
+          "targetVersion",
+          "completedAt",
+          "evidenceRefs"
+        ],
+        "properties": {
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create-rework-work-order",
+              "close-rework-work-order",
+              "close-punch-list-item",
+              "submit-closeout"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targetVersion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "ActionError": {
+        "title": "ActionError",
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "traceId",
+          "retryable"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "InvalidRequest",
+              "Forbidden",
+              "NotFound",
+              "VersionConflict",
+              "IdempotencyConflict",
+              "DependencyUnavailable",
+              "ActionFailed"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "traceId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "SiteView": {
+        "title": "SiteView",
+        "type": "object",
+        "required": [
+          "site",
+          "milestones",
+          "workOrders",
+          "tickets",
+          "artifacts",
+          "photos",
+          "validations",
+          "activeCase"
+        ],
+        "properties": {
+          "site": {
+            "$ref": "#/components/schemas/Site"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Milestone"
+            }
+          },
+          "workOrders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrder"
+            }
+          },
+          "tickets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ticket"
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AcceptanceArtifact"
+            }
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Photo"
+            }
+          },
+          "validations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationResult"
+            }
+          },
+          "activeCase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CloseOutCase"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "UploadMetadata": {
+        "title": "UploadMetadata",
+        "type": "object",
+        "description": "Metadata only; bytes are a separate multipart field. Uploader identity comes from the authenticated caller, never this body.",
+        "required": [
+          "siteId",
+          "caseId",
+          "requirementId",
+          "artifactType"
+        ],
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "caseId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "requirementId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "artifactType": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "checklistItemCode": {
+            "$ref": "#/components/schemas/ChecklistItemCode"
+          },
+          "sector": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "replacesPhotoId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "artifactType": {
+                  "const": "photo_pack"
+                }
+              },
+              "required": [
+                "artifactType"
+              ]
+            },
+            "then": {
+              "properties": {
+                "checklistItemCode": {
+                  "$ref": "#/components/schemas/ChecklistItemCode"
+                },
+                "latitude": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90
+                },
+                "longitude": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180
+                },
+                "capturedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "replacesPhotoId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "checklistItemCode",
+                "latitude",
+                "longitude",
+                "capturedAt",
+                "replacesPhotoId"
+              ]
+            }
+          }
+        ],
+        "additionalProperties": true
+      },
+      "CodeLists": {
+        "title": "CodeLists",
+        "description": "Known producer codes. Generated reader types accept future string codes and boundary tooling logs them.",
+        "type": "object",
+        "required": [
+          "ArtifactType",
+          "ChecklistItemCode",
+          "MilestoneType",
+          "MilestoneStatus",
+          "WorkOrderType",
+          "WorkOrderStatus",
+          "TicketType",
+          "TicketStatus",
+          "ArtifactStatus",
+          "ReviewStatus",
+          "Readiness",
+          "CloseOutStatus",
+          "StatusReason",
+          "ActorType"
+        ],
+        "properties": {
+          "ArtifactType": {
+            "type": "string",
+            "enum": [
+              "photo_pack",
+              "as_built",
+              "acceptance_certificate",
+              "rfds",
+              "integration_test_report",
+              "customer_pre_acceptance",
+              "close_out_package"
+            ]
+          },
+          "ChecklistItemCode": {
+            "type": "string",
+            "enum": [
+              "antenna_label",
+              "cabling",
+              "grounding",
+              "safety_signage",
+              "azimuth_sector_a",
+              "azimuth_sector_b",
+              "azimuth_sector_c",
+              "access_road"
+            ]
+          },
+          "MilestoneType": {
+            "type": "string",
+            "enum": [
+              "ConstructionComplete",
+              "IntegrationComplete",
+              "CloseOutSubmitted",
+              "PAC"
+            ]
+          },
+          "MilestoneStatus": {
+            "type": "string",
+            "enum": [
+              "Planned",
+              "Actualized"
+            ]
+          },
+          "WorkOrderType": {
+            "type": "string",
+            "enum": [
+              "Installation",
+              "Rework"
+            ]
+          },
+          "WorkOrderStatus": {
+            "type": "string",
+            "enum": [
+              "Open",
+              "InProgress",
+              "Closed"
+            ]
+          },
+          "TicketType": {
+            "type": "string",
+            "enum": [
+              "PunchList",
+              "Other"
+            ]
+          },
+          "TicketStatus": {
+            "type": "string",
+            "enum": [
+              "Open",
+              "Closed"
+            ]
+          },
+          "ArtifactStatus": {
+            "type": "string",
+            "enum": [
+              "Missing",
+              "Submitted",
+              "Validated",
+              "Rejected"
+            ]
+          },
+          "ReviewStatus": {
+            "type": "string",
+            "enum": [
+              "Auto",
+              "NeedsReview",
+              "Confirmed",
+              "Overridden"
+            ]
+          },
+          "Readiness": {
+            "type": "string",
+            "enum": [
+              "NotReady",
+              "Blocked",
+              "Ready"
+            ]
+          },
+          "CloseOutStatus": {
+            "type": "string",
+            "enum": [
+              "NotReady",
+              "Blocked",
+              "Ready",
+              "Submitted",
+              "Accepted"
+            ]
+          },
+          "StatusReason": {
+            "type": "string",
+            "enum": [
+              "AwaitingConstructionComplete",
+              "MissingEvidence",
+              "ReworkDraftReady",
+              "AwaitingReworkApproval",
+              "ReworkApproved",
+              "ReworkRejected",
+              "ReworkOrdered",
+              "ActionFailed",
+              "PackageCompiling",
+              "PackageReady",
+              "AwaitingSubmissionApproval",
+              "SubmissionApproved",
+              "SubmissionRejected",
+              "AwaitingCustomer",
+              "PAC"
+            ]
+          },
+          "ActorType": {
+            "type": "string",
+            "enum": [
+              "user",
+              "agent",
+              "system",
+              "policy"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "ArtifactType": {
+        "title": "ArtifactType",
+        "type": "string",
+        "enum": [
+          "photo_pack",
+          "as_built",
+          "acceptance_certificate",
+          "rfds",
+          "integration_test_report",
+          "customer_pre_acceptance",
+          "close_out_package"
+        ]
+      },
+      "ChecklistItemCode": {
+        "title": "ChecklistItemCode",
+        "type": "string",
+        "enum": [
+          "antenna_label",
+          "cabling",
+          "grounding",
+          "safety_signage",
+          "azimuth_sector_a",
+          "azimuth_sector_b",
+          "azimuth_sector_c",
+          "access_road"
+        ]
+      },
+      "MilestoneType": {
+        "title": "MilestoneType",
+        "type": "string",
+        "enum": [
+          "ConstructionComplete",
+          "IntegrationComplete",
+          "CloseOutSubmitted",
+          "PAC"
+        ]
+      },
+      "MilestoneStatus": {
+        "title": "MilestoneStatus",
+        "type": "string",
+        "enum": [
+          "Planned",
+          "Actualized"
+        ]
+      },
+      "WorkOrderType": {
+        "title": "WorkOrderType",
+        "type": "string",
+        "enum": [
+          "Installation",
+          "Rework"
+        ]
+      },
+      "WorkOrderStatus": {
+        "title": "WorkOrderStatus",
+        "type": "string",
+        "enum": [
+          "Open",
+          "InProgress",
+          "Closed"
+        ]
+      },
+      "TicketType": {
+        "title": "TicketType",
+        "type": "string",
+        "enum": [
+          "PunchList",
+          "Other"
+        ]
+      },
+      "TicketStatus": {
+        "title": "TicketStatus",
+        "type": "string",
+        "enum": [
+          "Open",
+          "Closed"
+        ]
+      },
+      "ArtifactStatus": {
+        "title": "ArtifactStatus",
+        "type": "string",
+        "enum": [
+          "Missing",
+          "Submitted",
+          "Validated",
+          "Rejected"
+        ]
+      },
+      "ReviewStatus": {
+        "title": "ReviewStatus",
+        "type": "string",
+        "enum": [
+          "Auto",
+          "NeedsReview",
+          "Confirmed",
+          "Overridden"
+        ]
+      },
+      "Readiness": {
+        "title": "Readiness",
+        "type": "string",
+        "enum": [
+          "NotReady",
+          "Blocked",
+          "Ready"
+        ]
+      },
+      "CloseOutStatus": {
+        "title": "CloseOutStatus",
+        "type": "string",
+        "enum": [
+          "NotReady",
+          "Blocked",
+          "Ready",
+          "Submitted",
+          "Accepted"
+        ]
+      },
+      "StatusReason": {
+        "title": "StatusReason",
+        "type": "string",
+        "enum": [
+          "AwaitingConstructionComplete",
+          "MissingEvidence",
+          "ReworkDraftReady",
+          "AwaitingReworkApproval",
+          "ReworkApproved",
+          "ReworkRejected",
+          "ReworkOrdered",
+          "ActionFailed",
+          "PackageCompiling",
+          "PackageReady",
+          "AwaitingSubmissionApproval",
+          "SubmissionApproved",
+          "SubmissionRejected",
+          "AwaitingCustomer",
+          "PAC"
+        ]
+      },
+      "ActorType": {
+        "title": "ActorType",
+        "type": "string",
+        "enum": [
+          "user",
+          "agent",
+          "system",
+          "policy"
+        ]
+      },
+      "ArtifactUploaded": {
+        "title": "ArtifactUploaded",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventEnvelope"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "ArtifactUploaded"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AcceptanceArtifact"
+          }
+        }
+      },
+      "EventEnvelope": {
+        "title": "EventEnvelope",
+        "description": "Draft common envelope; event-specific data must also validate against its own schema.",
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "eventType",
+          "eventId",
+          "caseId",
+          "siteId",
+          "occurredAt",
+          "producer",
+          "data"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+          },
+          "eventType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "caseId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "producer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": true
+      },
+      "MilestoneChanged": {
+        "title": "MilestoneChanged",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventEnvelope"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "MilestoneChanged"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Milestone"
+          }
+        }
+      },
+      "PhotoUploaded": {
+        "title": "PhotoUploaded",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventEnvelope"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "PhotoUploaded"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Photo"
+          }
+        }
+      },
+      "TicketChanged": {
+        "title": "TicketChanged",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventEnvelope"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "TicketChanged"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Ticket"
+          }
+        }
+      },
+      "ValidationResultCreated": {
+        "title": "ValidationResultCreated",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventEnvelope"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "ValidationResultCreated"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ValidationResult"
+          }
+        }
+      },
+      "ValidationResultReviewed": {
+        "title": "ValidationResultReviewed",
+        "description": "Proposed immutable reviewed snapshot plus a decision-log reference; review actor/provenance needs Power Platform confirmation.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventEnvelope"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "ValidationResultReviewed"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "validationResult",
+              "decisionEntryId"
+            ],
+            "properties": {
+              "validationResult": {
+                "$ref": "#/components/schemas/ValidationResult"
+              },
+              "decisionEntryId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "WorkOrderChanged": {
+        "title": "WorkOrderChanged",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventEnvelope"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "WorkOrderChanged"
+          },
+          "data": {
+            "$ref": "#/components/schemas/WorkOrder"
+          }
+        }
+      },
+      "CloseOutCaseChanged": {
+        "title": "CloseOutCaseChanged",
+        "description": "Internal normalized envelope, NOT an assertion about the raw Dataverse service-endpoint wire format. TODO(verify): capture the external message and map it in one adapter.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventEnvelope"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "const": "CloseOutCaseChanged"
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "title": "CloseOutCaseChange",
+            "type": "object",
+            "required": [
+              "caseId",
+              "siteId",
+              "status",
+              "statusReason",
+              "rowVersion"
+            ],
+            "properties": {
+              "caseId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "siteId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "$ref": "#/components/schemas/CloseOutStatus"
+              },
+              "statusReason": {
+                "$ref": "#/components/schemas/StatusReason"
+              },
+              "rowVersion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "transitionOccurrenceId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Optional proposed occurrence discriminator; not yet agreed or a deployed Dataverse field."
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "SharedObject": {
+        "title": "SharedObject",
+        "description": "Draft logical objects, not physical Dataverse column names. Lifecycle nullability and auxiliary structures require owner review.",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/CustomerProject"
+          },
+          {
+            "$ref": "#/components/schemas/ArtifactRequirement"
+          },
+          {
+            "$ref": "#/components/schemas/ChecklistItem"
+          },
+          {
+            "$ref": "#/components/schemas/Site"
+          },
+          {
+            "$ref": "#/components/schemas/Milestone"
+          },
+          {
+            "$ref": "#/components/schemas/Subcontractor"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrder"
+          },
+          {
+            "$ref": "#/components/schemas/Ticket"
+          },
+          {
+            "$ref": "#/components/schemas/AcceptanceArtifact"
+          },
+          {
+            "$ref": "#/components/schemas/Photo"
+          },
+          {
+            "$ref": "#/components/schemas/ValidationResult"
+          },
+          {
+            "$ref": "#/components/schemas/CloseOutCase"
+          },
+          {
+            "$ref": "#/components/schemas/DecisionLogEntry"
+          },
+          {
+            "$ref": "#/components/schemas/EntityMatchCandidate"
+          }
+        ]
+      },
+      "CustomerProject": {
+        "title": "CustomerProject",
+        "type": "object",
+        "required": [
+          "projectId",
+          "programCode",
+          "customerName",
+          "customerId",
+          "market",
+          "lowConfidenceThreshold"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "programCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "market": {
+            "type": "string",
+            "enum": [
+              "SE",
+              "NO"
+            ]
+          },
+          "lowConfidenceThreshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "additionalProperties": true
+      },
+      "ArtifactRequirement": {
+        "title": "ArtifactRequirement",
+        "type": "object",
+        "required": [
+          "requirementId",
+          "projectId",
+          "artifactType",
+          "mandatory",
+          "phase"
+        ],
+        "properties": {
+          "requirementId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "artifactType": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "close_out"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "ChecklistItem": {
+        "title": "ChecklistItem",
+        "type": "object",
+        "required": [
+          "checklistItemId",
+          "requirementId",
+          "itemCode",
+          "description",
+          "mandatory",
+          "rfdsCheck"
+        ],
+        "properties": {
+          "checklistItemId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirementId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "itemCode": {
+            "$ref": "#/components/schemas/ChecklistItemCode"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "rfdsCheck": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Site": {
+        "title": "Site",
+        "type": "object",
+        "required": [
+          "siteId",
+          "siteName",
+          "sourceSiteIds",
+          "projectId",
+          "market",
+          "latitude",
+          "longitude",
+          "siteType",
+          "currentPhase",
+          "readiness",
+          "readinessMissing",
+          "readinessEvaluatedAt"
+        ],
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "siteName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceSiteIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "market": {
+            "type": "string",
+            "enum": [
+              "SE",
+              "NO"
+            ]
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "siteType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "currentPhase": {
+            "type": "string",
+            "minLength": 1
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/Readiness"
+          },
+          "readinessMissing": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "readinessEvaluatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Milestone": {
+        "title": "Milestone",
+        "type": "object",
+        "required": [
+          "milestoneId",
+          "siteId",
+          "projectId",
+          "milestoneType",
+          "status",
+          "plannedDate",
+          "actualDate",
+          "sourceUpdatedAt",
+          "isStale"
+        ],
+        "properties": {
+          "milestoneId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "milestoneType": {
+            "$ref": "#/components/schemas/MilestoneType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MilestoneStatus"
+          },
+          "plannedDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "actualDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sourceUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isStale": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Subcontractor": {
+        "title": "Subcontractor",
+        "type": "object",
+        "required": [
+          "subcontractorId",
+          "name",
+          "normalizedName",
+          "sourceNames"
+        ],
+        "properties": {
+          "subcontractorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "normalizedName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "WorkOrder": {
+        "title": "WorkOrder",
+        "type": "object",
+        "required": [
+          "workOrderId",
+          "siteId",
+          "subcontractorId",
+          "workOrderType",
+          "status",
+          "caseId",
+          "reason",
+          "createdAt",
+          "dueDate",
+          "closedAt",
+          "version"
+        ],
+        "properties": {
+          "workOrderId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subcontractorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workOrderType": {
+            "$ref": "#/components/schemas/WorkOrderType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkOrderStatus"
+          },
+          "caseId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "workOrderType": {
+                  "const": "Rework"
+                }
+              },
+              "required": [
+                "workOrderType"
+              ]
+            },
+            "then": {
+              "properties": {
+                "caseId": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        ],
+        "additionalProperties": true
+      },
+      "Ticket": {
+        "title": "Ticket",
+        "type": "object",
+        "required": [
+          "ticketId",
+          "siteId",
+          "ticketType",
+          "blocking",
+          "status",
+          "description",
+          "checklistItemCode",
+          "openedAt",
+          "closedAt",
+          "closingPhotoId"
+        ],
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ticketType": {
+            "$ref": "#/components/schemas/TicketType"
+          },
+          "blocking": {
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "checklistItemCode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecklistItemCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "openedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "closingPhotoId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "AcceptanceArtifact": {
+        "title": "AcceptanceArtifact",
+        "type": "object",
+        "required": [
+          "artifactId",
+          "siteId",
+          "requirementId",
+          "artifactType",
+          "status",
+          "blobUrl",
+          "version",
+          "submittedBy",
+          "submittedAt",
+          "caseId"
+        ],
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirementId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "artifactType": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArtifactStatus"
+          },
+          "blobUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "submittedBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "submittedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "caseId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Photo": {
+        "title": "Photo",
+        "type": "object",
+        "required": [
+          "photoId",
+          "artifactId",
+          "siteId",
+          "checklistItemCode",
+          "sector",
+          "blobUrl",
+          "latitude",
+          "longitude",
+          "capturedAt",
+          "uploadedBy",
+          "replacesPhotoId",
+          "isCurrent"
+        ],
+        "properties": {
+          "photoId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "artifactId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "checklistItemCode": {
+            "$ref": "#/components/schemas/ChecklistItemCode"
+          },
+          "sector": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "blobUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uploadedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "replacesPhotoId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isCurrent": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ValidationResult": {
+        "title": "ValidationResult",
+        "type": "object",
+        "required": [
+          "validationResultId",
+          "checklistItemCode",
+          "compliant",
+          "confidence",
+          "findings",
+          "rfdsArtifactId",
+          "rfdsReference",
+          "reviewStatus",
+          "validatedBy",
+          "model",
+          "modelVersion",
+          "validatedAt",
+          "caseId"
+        ],
+        "properties": {
+          "validationResultId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "photoId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "artifactId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "checklistItemCode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecklistItemCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compliant": {
+            "type": "boolean"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "rfdsArtifactId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rfdsReference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewStatus": {
+            "$ref": "#/components/schemas/ReviewStatus"
+          },
+          "validatedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modelVersion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "validatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "caseId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "photoId"
+            ],
+            "properties": {
+              "photoId": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "artifactId"
+            ],
+            "properties": {
+              "artifactId": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        ],
+        "additionalProperties": true
+      },
+      "ApprovalDecision": {
+        "title": "ApprovalDecision",
+        "type": "object",
+        "description": "Proposed logical decision structure; physical Dataverse mapping and trusted provenance require Henrik's confirmation.",
+        "required": [
+          "outcome",
+          "actorType",
+          "actorId",
+          "decidedAt",
+          "policyVersion"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "Approved",
+              "Rejected"
+            ]
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "user",
+              "policy"
+            ]
+          },
+          "actorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "policyVersion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "comment": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "CloseOutCase": {
+        "title": "CloseOutCase",
+        "type": "object",
+        "required": [
+          "caseId",
+          "siteId",
+          "status",
+          "statusReason",
+          "bpfStage",
+          "reworkDecision",
+          "reworkPolicyVersion",
+          "submissionDecision",
+          "packageArtifactId",
+          "createdAt",
+          "submittedAt",
+          "acceptedAt",
+          "slaDueAt"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "$ref": "#/components/schemas/CloseOutStatus"
+          },
+          "statusReason": {
+            "$ref": "#/components/schemas/StatusReason"
+          },
+          "bpfStage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reworkDecision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reworkPolicyVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "submissionDecision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "packageArtifactId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submittedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "acceptedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "slaDueAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "EvidenceRef": {
+        "title": "EvidenceRef",
+        "type": "object",
+        "description": "Proposed version-aware citation, not a SAS token or embedded document.",
+        "required": [
+          "objectType",
+          "id"
+        ],
+        "properties": {
+          "objectType": {
+            "type": "string",
+            "enum": [
+              "Photo",
+              "AcceptanceArtifact",
+              "ValidationResult",
+              "Ticket",
+              "WorkOrder",
+              "Milestone",
+              "ChecklistItem",
+              "ArtifactRequirement"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      },
+      "DecisionLogEntry": {
+        "title": "DecisionLogEntry",
+        "type": "object",
+        "required": [
+          "entryId",
+          "caseId",
+          "seq",
+          "timestamp",
+          "actorType",
+          "actorId",
+          "role",
+          "step",
+          "inputs",
+          "evidenceRefs",
+          "model",
+          "modelVersion",
+          "confidence",
+          "ruleResult",
+          "outcome",
+          "traceId"
+        ],
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorType": {
+            "$ref": "#/components/schemas/ActorType"
+          },
+          "actorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "step": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inputs": {
+            "type": "object"
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            }
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modelVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "ruleResult": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "traceId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          }
+        },
+        "additionalProperties": true
+      },
+      "EntityMatchCandidate": {
+        "title": "EntityMatchCandidate",
+        "type": "object",
+        "required": [
+          "candidateId",
+          "entityType",
+          "candidateIds",
+          "matchConfidence",
+          "matchReasons",
+          "status",
+          "decidedBy",
+          "decidedAt",
+          "survivorId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entityType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidateIds": {
+            "type": "array",
+            "minItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "matchConfidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "matchReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Pending",
+              "Merged",
+              "Rejected"
+            ]
+          },
+          "decidedBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decidedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "survivorId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

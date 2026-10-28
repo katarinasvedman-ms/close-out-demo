@@ -1,0 +1,46 @@
+components:
+  foundry-model:
+    availability: GA
+    mode: live-regional
+    implementation: infra/models.bicep
+    note: GPT-4o 2024-11-20, Standard capacity 30 in Sweden Central; no global processing SKU.
+  validation-agent:
+    availability: Custom
+    mode: live
+    implementation: agents.foundry
+    note: Versioned Foundry prompt agent with real PNG/PDF inference; synthetic fixtures, no Content Understanding or Dataverse writes.
+  closeout-agent:
+    availability: Custom
+    mode: live-with-stub-tools
+    implementation: agents.foundry
+    note: Versioned Foundry prompt agent; Agent Framework executes scoped local MCP/document tools. Cited drafts only, no approvals/actions/packages.
+  synthetic-seed:
+    availability: Custom
+    mode: local
+    implementation: shared.seed
+    note: Provisional contract-valid fixture records and isolated defective Fabric extract.
+  synthetic-evidence:
+    availability: Custom
+    mode: local
+    implementation: shared.seed_files
+    note: Labelled PNG schematics and PDF/text inputs; the offline demo uses seeded outcomes and the agent CLI can run real inference.
+  readiness-activator-stub:
+    availability: Custom
+    mode: stub
+    implementation: shared.readiness
+    note: Local rule and transition simulation, not production Fabric or Dataverse writes.
+  data-agent-mcp-stub:
+    availability: Custom
+    mode: stub
+    implementation: shared.stub_mcp
+    note: Local stdio get_site_facts tool with fixed site allowlist and optional validated live-photo overlay, not the live Fabric API or Entra auth.
+  eventstream-ledger-stub:
+    availability: Custom
+    mode: stub
+    implementation: shared.event_stub
+    note: Local SQLite deduplication and snapshot replay, not Eventstream delivery or APIM action receipts.
+  dataverse-fake:
+    availability: Custom
+    mode: unit-test-only
+    implementation: tests/conftest.py
+    note: ETag test helper; not packaged or selectable by runtime configuration.

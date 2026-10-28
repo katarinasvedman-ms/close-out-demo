@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:readiness-signal",
+  "title": "ReadinessSignal",
+  "description": "Draft body of the Activator to Power Automate signal, not the event/message envelope.",
+  "type": "object",
+  "required": ["caseId", "siteId", "readiness", "readinessMissing", "evaluatedAt"],
+  "properties": {
+    "caseId": { "type": "string", "format": "uuid" },
+    "siteId": { "type": "string", "minLength": 1 },
+    "readiness": { "type": "string", "enum": ["Blocked", "Ready"] },
+    "readinessMissing": {
+      "description": "Proposed condition ID list; detailed shape requires cross-track agreement.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "evaluatedAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "readiness": { "const": "Ready" } } },
+      "then": { "properties": { "readinessMissing": { "type": "array", "maxItems": 0 } } }
+    }
+  ],
+  "additionalProperties": true
+}

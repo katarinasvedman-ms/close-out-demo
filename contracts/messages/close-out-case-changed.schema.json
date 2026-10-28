@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:close-out-case-changed",
+  "title": "CloseOutCaseChanged",
+  "description": "Internal normalized envelope, NOT an assertion about the raw Dataverse service-endpoint wire format. TODO(verify): capture the external message and map it in one adapter.",
+  "allOf": [{ "$ref": "urn:close-out-demo:contracts:event-envelope" }],
+  "type": "object",
+  "properties": {
+    "eventType": { "const": "CloseOutCaseChanged" },
+    "caseId": { "type": "string", "format": "uuid" },
+    "data": {
+      "title": "CloseOutCaseChange", "type": "object",
+      "required": ["caseId", "siteId", "status", "statusReason", "rowVersion"],
+      "properties": {
+        "caseId": { "type": "string", "format": "uuid" },
+        "siteId": { "type": "string", "minLength": 1 },
+        "status": { "$ref": "urn:close-out-demo:contracts:codes#/properties/CloseOutStatus" },
+        "statusReason": { "$ref": "urn:close-out-demo:contracts:codes#/properties/StatusReason" },
+        "rowVersion": { "type": "string", "minLength": 1 },
+        "transitionOccurrenceId": {
+          "type": "string", "format": "uuid",
+          "description": "Optional proposed occurrence discriminator; not yet agreed or a deployed Dataverse field."
+        }
+      }, "additionalProperties": true
+    }
+  }
+}

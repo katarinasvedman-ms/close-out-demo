@@ -1,0 +1,7 @@
+{
+  "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+  "siteId": "SE-STO-0042",
+  "readiness": "Blocked",
+  "readinessMissing": ["CHECKLIST-A-GROUNDING", "CHECKLIST-A-AZIMUTH-B", "PL-0042-01"],
+  "evaluatedAt": "2026-10-27T09:00:01Z"
+}

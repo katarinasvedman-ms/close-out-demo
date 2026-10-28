@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "0.1.0",
+  "eventType": "PhotoUploaded",
+  "eventId": "bbf48409-d2c1-4836-b0a2-df2dc2de9424",
+  "caseId": "a698bbeb-54b3-4f82-ac9b-50540593affc",
+  "siteId": "SE-STO-0042",
+  "occurredAt": "2026-10-27T09:00:00Z",
+  "producer": "azure.api",
+  "data": {
+    "photoId": "PHOTO-19",
+    "checklistItemCode": "grounding"
+  }
+}

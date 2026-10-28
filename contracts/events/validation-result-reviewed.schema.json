@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:validation-result-reviewed",
+  "title": "ValidationResultReviewed",
+  "description": "Proposed immutable reviewed snapshot plus a decision-log reference; review actor/provenance needs Power Platform confirmation.",
+  "allOf": [{ "$ref": "urn:close-out-demo:contracts:event-envelope" }],
+  "type": "object",
+  "properties": {
+    "eventType": { "const": "ValidationResultReviewed" },
+    "data": {
+      "type": "object", "required": ["validationResult", "decisionEntryId"],
+      "properties": {
+        "validationResult": { "$ref": "urn:close-out-demo:contracts:models#/$defs/ValidationResult" },
+        "decisionEntryId": { "type": "string", "format": "uuid" }
+      }, "additionalProperties": true
+    }
+  }
+}
