@@ -5,9 +5,9 @@ Version 2.0 (EN) · 27 October 2026 · Microsoft Confidential
 
 | Track | Owner | Scope |
 |---|---|---|
-| **Power Platform** | Henrik | Dataverse (close-out record = process instance), business process flow, Power Apps, Power Pages, Power Automate (status and approval flows), Teams approvals, Copilot Studio, Power Platform pipelines |
-| **Fabric** | Lamin | Synthetic structured data, OneLake, Data Factory, notebooks, AI functions, ontology (Fabric IQ) and semantic model, close-out rule, Eventstream, Eventhouse, Activator, Data Agent, Power BI, Fabric Maps |
-| **Azure/Foundry** | Katarina | Synthetic photos and documents in Blob, Logic Apps (short runs per event), Foundry agents, Content Understanding, Foundry IQ, API Management, mock systems of record (Sitetracker and ticketing), Event Grid, Service Bus, Entra, Application Insights, evals, cost |
+| **Power Platform** | Power Platform track owner | Dataverse (close-out record = process instance), business process flow, Power Apps, Power Pages, Power Automate (status and approval flows), Teams approvals, Copilot Studio, Power Platform pipelines |
+| **Fabric** | Fabric track owner | Synthetic structured data, OneLake, Data Factory, notebooks, AI functions, ontology (Fabric IQ) and semantic model, close-out rule, Eventstream, Eventhouse, Activator, Data Agent, Power BI, Fabric Maps |
+| **Azure/Foundry** | Azure/Foundry track owner | Synthetic photos and documents in Blob, Logic Apps (short runs per event), Foundry agents, Content Understanding, Foundry IQ, API Management, mock systems of record (Sitetracker and ticketing), Event Grid, Service Bus, Entra, Application Insights, evals, cost |
 
 ---
 
@@ -39,14 +39,14 @@ Construction Complete (milestone actualized)
 
 | Role | Organisation | Surface | Built by |
 |---|---|---|---|
-| Close-out Coordinator | Ericsson | Power Apps (Site 360, work queue), Teams | Henrik |
-| Construction Manager | Ericsson | Teams (approval card), Power Apps | Henrik |
-| Subcontractor / field technician | Subcontractor | Power Apps mobile (work orders, photos, punch list) | Henrik |
-| Customer PM | Customer (external) | Power Pages with Entra External ID | Henrik |
-| Data steward | Ericsson | Power Apps (duplicate review queue) | Henrik |
-| Citizen developer | Ericsson | Power Apps, Power Automate, pipelines (step 11) | Henrik |
-| Program leadership | Ericsson | Power BI (KPIs), Activator alerts | Lamin |
-| Presenter | Microsoft | Presenter console (web app): demo panel, case tracker, decision log, links to traces | Katarina |
+| Close-out Coordinator | Ericsson | Power Apps (Site 360, work queue), Teams | Power Platform |
+| Construction Manager | Ericsson | Teams (approval card), Power Apps | Power Platform |
+| Subcontractor / field technician | Subcontractor | Power Apps mobile (work orders, photos, punch list) | Power Platform |
+| Customer PM | Customer (external) | Power Pages with Entra External ID | Power Platform |
+| Data steward | Ericsson | Power Apps (duplicate review queue) | Power Platform |
+| Citizen developer | Ericsson | Power Apps, Power Automate, pipelines (step 11) | Power Platform |
+| Program leadership | Ericsson | Power BI (KPIs), Activator alerts | Fabric |
+| Presenter | Microsoft | Presenter console (web app): demo panel, case tracker, decision log, links to traces | Azure/Foundry |
 
 ---
 
@@ -74,7 +74,7 @@ Construction Complete (milestone actualized)
 
 ## 4. Data model and ontology
 
-This is the shared contract for Fabric, Dataverse and Azure. Lamin builds the ontology from it; Henrik builds the Dataverse tables for the objects mastered in Dataverse; Katarina reads and writes using the same names.
+This is the shared contract for Fabric, Dataverse and Azure. The Fabric track builds the ontology from it; the Power Platform track builds the Dataverse tables for the objects mastered in Dataverse; the Azure/Foundry track reads and writes using the same names.
 
 ### 4.1 Objects, master and binding
 
@@ -177,7 +177,7 @@ s.readinessMissing = list of unmet conditions with ids (checklistItemId, require
 | Customer PM | Sites where Site → CustomerProject.customerId = own customer; submitted packages only |
 | Coordinator, Construction Manager | All sites in assigned programs |
 
-The same rule applies in OneLake/semantic model (Lamin), Dataverse (Henrik) and API Management (Katarina).
+The same rule applies in OneLake/semantic model (Fabric), Dataverse (Power Platform) and API Management (Azure/Foundry).
 
 ---
 
@@ -221,7 +221,7 @@ The same rule applies in OneLake/semantic model (Lamin), Dataverse (Henrik) and 
 
 ## 6. Synthetic data
 
-**Ownership:** Lamin creates the structured data in Fabric. Katarina creates the files – photos and documents – in Blob Storage and the metadata rows (AcceptanceArtifact, Photo) on upload. Files are never stored in Fabric.
+**Ownership:** The Fabric track creates the structured data in Fabric. The Azure/Foundry track creates the files – photos and documents – in Blob Storage and the metadata rows (AcceptanceArtifact, Photo) on upload. Files are never stored in Fabric.
 
 **Five sources per section 8.2, with deliberate defects for step 1**
 
@@ -258,7 +258,7 @@ The same rule applies in OneLake/semantic model (Lamin), Dataverse (Henrik) and 
 
 Status: **GA** = generally available, **CFG** = configuration, **SVC** = custom logic, **PRE** = preview.
 
-| # | Step | Power Platform (Henrik) | Fabric (Lamin) | Azure/Foundry (Katarina) | Status |
+| # | Step | Power Platform | Fabric | Azure/Foundry | Status |
 |---|---|---|---|---|---|
 | 1 | **Imperfect data ingestion** – duplicates, conflicting IDs, stale records; matching with confidence and a review queue | Review queue in Power Apps over EntityMatchCandidate; decisions back | Data Factory → OneLake, notebooks and AI functions for matching, candidates to Dataverse, decisions via Link to Fabric | – | GA + SVC |
 | 2 | **Ontology and Site 360** – objects, relationships, close-out rule; Site 360 with timeline, documents, photos, tickets, map | Site 360 in Power Apps with record, tasks, embedded Power BI and map | Fabric IQ ontology (PRE) with GA path via semantic model; the rule (section 4.4); Fabric Maps; Power BI | `get-site` and photo viewing via API Management (custom connector) | GA + PRE + CFG |
@@ -393,20 +393,20 @@ sequenceDiagram
 
 | # | Decision | Proposal | Owner |
 |---|---|---|---|
-| 1 | Fabric IQ ontology – status and binding | Label as preview with GA path via semantic model; bind to Eventhouse for real time | Lamin |
-| 2 | Rule as ontology rule or KQL | Ontology rule if it triggers Activator fast enough, otherwise KQL | Lamin |
-| 3 | Status reason transitions on a custom table | Verify day 1; otherwise validation in the status flow | Henrik |
-| 4 | SLA on a custom table (licensing) | Verify; otherwise Activator alert + scheduled flow | Henrik |
-| 5 | Teams approvals in the demo tenant | Test day 1; fallback: approval in Power Apps | Henrik |
-| 6 | PAC written back to Sitetracker | Yes, via API Management (`record-pac`) if time allows, otherwise Dataverse only | Katarina + Henrik |
-| 7 | Customer PM – external test user | Synthetic customer user in Entra External ID | Henrik |
-| 8 | Demo date | Week 45, afternoon CET, 90 min | Daniel |
+| 1 | Fabric IQ ontology – status and binding | Label as preview with GA path via semantic model; bind to Eventhouse for real time | Fabric |
+| 2 | Rule as ontology rule or KQL | Ontology rule if it triggers Activator fast enough, otherwise KQL | Fabric |
+| 3 | Status reason transitions on a custom table | Verify day 1; otherwise validation in the status flow | Power Platform |
+| 4 | SLA on a custom table (licensing) | Verify; otherwise Activator alert + scheduled flow | Power Platform |
+| 5 | Teams approvals in the demo tenant | Test day 1; fallback: approval in Power Apps | Power Platform |
+| 6 | PAC written back to Sitetracker | Yes, via API Management (`record-pac`) if time allows, otherwise Dataverse only | Azure/Foundry + Power Platform |
+| 7 | Customer PM – external test user | Synthetic customer user in Entra External ID | Power Platform |
+| 8 | Demo date | Week 45, afternoon CET, 90 min | Demo owner |
 
 ---
 
 ## 12. Plan to demo (week 45, freeze two days before)
 
-| Day | Power Platform (Henrik) | Fabric (Lamin) | Azure/Foundry (Katarina) |
+| Day | Power Platform | Fabric | Azure/Foundry |
 |---|---|---|---|
 | 1 | Dataverse tables per sections 4–5, Teams approval test, status transitions | Ontology per section 4, synthetic data, the rule | Blob, upload API, Event Grid → Logic Apps, Service Bus from Dataverse |
 | 2 | Status flow (contract D), approval flows with policy (J) | Eventstream → rule → Activator (D), Link to Fabric | Validation (C), API Management actions (G), mock systems of record |

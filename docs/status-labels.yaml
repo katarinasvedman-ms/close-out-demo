@@ -1,4 +1,9 @@
 components:
+  guided-demo-installer:
+    availability: Custom
+    mode: implemented-connected-runtime-unverified
+    implementation: scripts/deploy-demo.ps1
+    note: Foundation-first deployment, guided prerequisites, target discovery, nonsecret resumable state, agent/runtime publication, synthetic knowledge and pinned playground inputs. Both agent versions are printed before an optional stop without Fabric changes. Only approved narrow updates to compatible existing Fabric bindings/schedules; no Fabric provisioning or callback credential creation. Focused offline installer tests do not establish connected runtime acceptance. Owner handoffs remain for unsupported grants/connections; final enablement is explicit.
   fresh-portal-deployment:
     availability: Custom
     mode: implemented-not-fresh-cloud-verified

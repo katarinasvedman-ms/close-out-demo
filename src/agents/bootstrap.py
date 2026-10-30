@@ -24,7 +24,7 @@ def command(executable: str, *args: str) -> str:
         [executable, *args],
         cwd=ROOT,
         check=True,
-        stdout=subprocess.PIPE,
+        capture_output=True,
         text=True,
         encoding="utf-8",
     )

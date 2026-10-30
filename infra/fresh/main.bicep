@@ -35,78 +35,20 @@ param eventstreamNamespace string
 param eventstreamEntity string
 
 var operatorPrincipalId = deployer().objectId
-var suffix = uniqueString(resourceGroup().id, foundryName)
 var tags = { 'azd-env-name': foundryName }
-var foundryUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')
-var logReader = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '73c42c96-874c-492b-b04d-ab87d138a893')
 
-resource foundry 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
-  name: foundryName
-  location: location
-  tags: tags
-  kind: 'AIServices'
-  sku: { name: 'S0' }
-  identity: { type: 'SystemAssigned' }
-  properties: {
-    allowProjectManagement: true
-    customSubDomainName: foundryName
-    disableLocalAuth: true
-    publicNetworkAccess: 'Enabled'
-  }
-  resource project 'projects' = {
-    name: projectName
-    location: location
-    identity: { type: 'SystemAssigned' }
-    properties: {
-      displayName: projectName
-      description: 'Synthetic evidence assessment and read-only close-out drafting; no approvals or system-of-record writes.'
-    }
-  }
-}
-
-resource operatorAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(foundry::project.id, operatorPrincipalId, foundryUser)
-  scope: foundry::project
-  properties: {
-    principalId: operatorPrincipalId
-    principalType: operatorPrincipalType
-    roleDefinitionId: foundryUser
-  }
-}
-
-module model '../models.bicep' = {
-  name: 'close-out-model'
+module foundation './foundation.bicep' = {
+  name: 'close-out-foundation'
   params: {
-    accountName: foundry.name
-    deploymentName: modelDeploymentName
-    modelName: modelName
-    modelVersion: modelVersion
-    capacity: modelCapacity
-  }
-}
-
-module knowledge '../knowledge/resources.bicep' = {
-  name: 'close-out-knowledge-resources'
-  params: {
+    foundryName: foundryName
+    projectName: projectName
     location: location
     searchLocation: searchLocation
-    operatorPrincipalId: operatorPrincipalId
+    modelDeploymentName: modelDeploymentName
+    modelName: modelName
+    modelVersion: modelVersion
+    modelCapacity: modelCapacity
     operatorPrincipalType: operatorPrincipalType
-    projectPrincipalId: foundry::project.identity.principalId
-    tags: tags
-  }
-}
-
-module knowledgeConnections '../knowledge/connection.bicep' = {
-  name: 'close-out-knowledge-connection'
-  params: {
-    accountName: foundry.name
-    projectName: foundry::project.name
-    connectionName: 'close-out-knowledge'
-    knowledgeBaseName: 'close-out-demo'
-    searchEndpoint: knowledge.outputs.searchEndpoint
-    searchResourceId: knowledge.outputs.searchResourceId
-    searchPrincipalId: knowledge.outputs.searchPrincipalId
   }
 }
 
@@ -115,7 +57,7 @@ module flow '../flow/main.bicep' = {
   params: {
     environmentName: take(foundryName, 24)
     location: location
-    projectResourceId: foundry::project.id
+    projectResourceId: foundation.outputs.projectResourceId
     adapterClientId: flowApiClientId
     adapterAudience: 'api://${flowApiClientId}'
     fabricDispatchPrincipalId: fabricDispatchPrincipalId
@@ -123,14 +65,14 @@ module flow '../flow/main.bicep' = {
     enableBlobValidation: false
     uploadOperatorPrincipalId: operatorPrincipalId
     uploadOperatorPrincipalType: operatorPrincipalType
-    publisherPrincipalId: foundry::project.identity.principalId
+    publisherPrincipalId: foundation.outputs.projectPrincipalId
     eventstreamNamespace: eventstreamNamespace
     eventstreamEntity: eventstreamEntity
     allowPublicNetworkAccess: true
     tags: tags
     foundryConfig: {
-      endpoint: foundry::project.properties.endpoints['AI Foundry API']
-      deployment: model.outputs.deploymentName
+      endpoint: foundation.outputs.projectEndpoint
+      deployment: foundation.outputs.modelDeploymentName
       model: modelName
       modelVersion: modelVersion
       validation: { name: 'close-out-validation', version: 'pending-publication', definitionHash: 'pending-publication' }
@@ -139,79 +81,25 @@ module flow '../flow/main.bicep' = {
   }
 }
 
-resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: 'log-${suffix}'
-  location: location
-  tags: tags
-  properties: {
-    sku: { name: 'PerGB2018' }
-    retentionInDays: 30
-  }
-}
-
-resource insights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${suffix}'
-  location: location
-  tags: tags
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    WorkspaceResourceId: logs.id
-  }
-}
-
-resource insightsConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = {
-  parent: foundry::project
-  name: 'close-out-insights'
-  properties: {
-    category: 'AppInsights'
-    authType: 'ApiKey'
-    target: insights.id
-    isSharedToAll: true
-    credentials: { key: insights.properties.ConnectionString }
-    metadata: {
-      ApiType: 'Azure'
-      ResourceId: insights.id
-    }
-  }
-}
-
-resource insightsReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(insights.id, foundry::project.id, logReader)
-  scope: insights
-  properties: {
-    principalId: foundry::project.identity.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: logReader
-  }
-}
-
-output resourceGroupName string = resourceGroup().name
-output subscriptionId string = subscription().subscriptionId
-output tenantId string = tenant().tenantId
-output foundryName string = foundry.name
-output projectName string = foundry::project.name
-output projectResourceId string = foundry::project.id
-output projectPrincipalId string = foundry::project.identity.principalId
-output projectEndpoint string = foundry::project.properties.endpoints['AI Foundry API']
-output modelDeploymentName string = model.outputs.deploymentName
-output modelName string = modelName
-output modelVersion string = modelVersion
-output searchEndpoint string = knowledge.outputs.searchEndpoint
-output storageEndpoint string = knowledge.outputs.storageEndpoint
-output storageResourceId string = knowledge.outputs.storageResourceId
-output containerName string = knowledge.outputs.containerName
-output connectionName string = 'close-out-knowledge'
-output knowledgeBaseName string = 'close-out-demo'
-output knowledgeModel object = {
-  kind: 'azureOpenAI'
-  azureOpenAIParameters: {
-    resourceUri: foundry.properties.endpoints['OpenAI Language Model Instance API']
-    deploymentId: model.outputs.deploymentName
-    modelName: modelName
-  }
-}
-output applicationInsightsResourceId string = insights.id
+output resourceGroupName string = foundation.outputs.resourceGroupName
+output subscriptionId string = foundation.outputs.subscriptionId
+output tenantId string = foundation.outputs.tenantId
+output foundryName string = foundation.outputs.foundryName
+output projectName string = foundation.outputs.projectName
+output projectResourceId string = foundation.outputs.projectResourceId
+output projectPrincipalId string = foundation.outputs.projectPrincipalId
+output projectEndpoint string = foundation.outputs.projectEndpoint
+output modelDeploymentName string = foundation.outputs.modelDeploymentName
+output modelName string = foundation.outputs.modelName
+output modelVersion string = foundation.outputs.modelVersion
+output searchEndpoint string = foundation.outputs.searchEndpoint
+output storageEndpoint string = foundation.outputs.storageEndpoint
+output storageResourceId string = foundation.outputs.storageResourceId
+output containerName string = foundation.outputs.containerName
+output connectionName string = foundation.outputs.connectionName
+output knowledgeBaseName string = foundation.outputs.knowledgeBaseName
+output knowledgeModel object = foundation.outputs.knowledgeModel
+output applicationInsightsResourceId string = foundation.outputs.applicationInsightsResourceId
 output flow object = {
   workflowName: flow.outputs.workflowName
   adapterName: flow.outputs.adapterName

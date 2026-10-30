@@ -1,5 +1,134 @@
 # Fresh headless deployment
 
+## Guided setup from a downloaded repository
+
+Open PowerShell in the extracted repository and run:
+
+```powershell
+.\scripts\deploy-demo.ps1 -Environment demo-review
+```
+
+The launcher works from Windows PowerShell and hands off to PowerShell 7. If
+PowerShell 7, Azure CLI or uv is missing, it prints the supported installation
+instructions and the same rerun command. It does not bypass execution policy,
+silently elevate, install a separate test toolchain or require Node/Docker/azd.
+uv restores the existing locked agents/flow dependencies and obtains Python 3.11.
+
+The guided setup first selects your subscription and dedicated resource group,
+then deploys the Azure/Foundry foundation: Foundry project, model, Search,
+document Storage, monitoring and their scoped permissions. This stage uses
+`infra\fresh\foundation.bicep` and needs no application client IDs or Fabric
+selections. It reports **infrastructure prepared**, not agents ready.
+
+Next it reuses saved application registrations or offers to prepare dedicated
+single-tenant registrations without secrets, with explicit approval and directory
+permission. Choose **n** when asked whether to use an administrator-supplied
+existing application to use automatic preparation. Choose **y** only when an
+administrator has supplied a matching existing application client ID.
+Azure Owner alone does not grant those directory permissions.
+
+It then selects existing Fabric items by name. KQL database choices are limited to sources
+used by both the selected Data Agent's draft and published stages. If an earlier
+installer saved a mismatched database, rerunning offers a confirmed local
+correction before secured runtime/agent publication, retaining Azure selections and a backup.
+It never silently redirects an already-started deployment or edits the Data Agent
+to match a wrong selection. It discovers the published Data Agent
+tool and Eventstream coordinates. These are needed for the real agent tool
+bindings and secured runtime, not for the initial Azure foundation.
+
+The application steps are separate: **Application 1 of 2** identifies the
+protected publisher/coordinator APIs; **Application 2 of 2** is Fabric's caller
+identity for the coordinator. For an existing deployment, reuse its corresponding
+saved application for each role, not the same ID twice. On the optional existing
+application path, enter only the Application
+(client) ID, without an `api://` prefix or any credential.
+The identifier-URI and token-version confirmation configures the newly selected
+dedicated API registration; it does not change a different demo's application.
+Approve service-principal callback authentication only with target-owner approval.
+That confirmation records approval; it creates no password or Fabric connection.
+
+If setup reports `CapacityNotActive`, the existing Fabric capacity is inactive,
+not necessarily missing permissions. Its administrator must open Azure portal >
+Microsoft Fabric, select the workspace's capacity and choose **Resume**. This
+restarts billing. Wait until it is active, then rerun the same installer command.
+The installer does not resume Fabric capacity automatically.
+
+If the supported demo policy disables the new Key Vault's public networking,
+the installer asks for a separate, explicit policy-owner approval to set
+`SecurityControl=Ignore` on the selected dedicated resource group. With approval
+and permission it merges the tag, preserves existing tags, and retries the same
+deployment once. The operator does not need to use the portal to set it. This exception
+can affect other matching controls in that group; deployment/cost approval does
+not authorize it. Unrecognized policies, custom tag values or missing permissions
+remain owner handoffs. Existing exception tags are preserved, not re-applied.
+
+After application and tool configuration, `infra\fresh\main.bicep` reuses the
+same foundation resources and adds the secured runtime; resource names and
+identities are retained. The full portal template still requires its API,
+callback and Eventstream parameters up front. The installer separately records
+foundation and full-runtime progress; a stopped or failed later stage does not
+erase the foundation, saved registrations or original full-deployment state.
+
+The installer publishes both fully bound prompt agents and the locked runtime,
+loads synthetic documents using the existing indexing wait, registers PHOTO-20
+and RFDS, and exports the exact registered playground image/message. It can
+back up and narrowly update compatible existing notebook/pipeline/Activator
+bindings and an existing bounded schedule, after approval. No Fabric items,
+tables, connections, capacity or workspace are created. Custom/incompatible
+definitions are left unchanged with an owner handoff.
+
+Azure/Foundry publication and playground preparation complete before any Fabric
+permission, Activator, notebook, pipeline or schedule changes. The installer
+prints both agent versions and saves the playground handoff, then asks whether
+to continue with Fabric setup. Answer **n** to retain the Azure setup without
+changing an existing Fabric demo. Azure publication pauses only the selected
+Azure target's workflows when needed, never the existing Fabric Activator.
+An Azure-only preparation is not a connected or end-to-end verified flow; do
+not send the playground message until Fabric setup and enablement are complete.
+
+Its ignored `.local\installer\<environment>\profile.json` stores nonsecret
+selections and approvals; `state.json` records setup progress. Existing
+`.local\fresh\<subscription-id>\<foundry-name>\` remains the source of agent pins
+and deployment receipts. Keep both directories and rerun the same command after
+an interruption. An unchanged successful installation does not intentionally
+redeploy Bicep, republish ZIPs or disable the coordinator. A needed update pauses
+the target's Azure workflows and requires final enablement again. No automatic
+rollback or deletion of already provisioned Azure resources is promised.
+
+Some access cannot be prepared until the new identities exist. Missing access
+produces the exact target, identity and required owner action in `handoff.txt`.
+Direct Data Agent sharing remains an owner confirmation, not an API-proven grant.
+The installer prints the actual workspace, agent and managed-identity names,
+the identity object ID, the item-row **... -> Manage permissions** route and the
+**Share** dialog alternative. These instructions are saved before it asks for
+confirmation. Typing `y` does not create the grant.
+The Fabric owner must provide a target-specific approved service-principal Web
+connection for the printed Logic App host and API audience; the supported
+connection-update API cannot change an existing connection URL. The installer
+does not create passwords, connections or temporary probe pipelines.
+Callback credential identity/expiry requires the connection owner's confirmation;
+this is not an authentication probe.
+
+Final enablement asks once before enabling the coordinator, the selected
+Blocked/Ready Activator rules and any approved schedule renewal. The separate
+Blob-validation workflow stays disabled. Schedule renewals are bounded to eight
+hours; the existing schedule's end time is printed. Scheduled work and Azure
+hosting incur charges. Never approve a shared item serving another deployment.
+
+The final handoff prints the project URL, validation agent name/version,
+`PHOTO-20.png` path and `message.json` path. Open the agent's playground, attach
+the image, paste the message and send. Retries reuse the same publication ID;
+do not manufacture new IDs for an unchanged retry.
+For a genuinely new assessment, rerun with `-NewAssessment` and confirm new
+run/batch/publication IDs. This retains the existing Azure deployment and
+previously exported files; it does not submit the assessment for you.
+
+**Connected runtime acceptance is separate:** focused installer unit tests,
+setup safety checks and the document indexing wait do not prove the full flow.
+The installer runs no model probe or end-to-end assessment and does not observe
+Activator history or claim connected fresh-target runtime acceptance.
+The advanced portal/bootstrap reference below remains available to administrators.
+
 ## Selected flow and deployment boundaries
 
 The required deployment target is **playground validation agent -> its
