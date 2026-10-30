@@ -234,6 +234,19 @@ export type ArtifactUploaded = EventEnvelope & {
   [k: string]: unknown;
 };
 /**
+ * Synthetic test ingestion barrier. Fabric must observe every listed eventId with matching run/batch/case/site identity before projecting this batch. Arrival of this marker alone is not readiness.
+ *
+ * This interface was referenced by `ContractTypes`'s JSON-Schema
+ * via the `definition` "EvidenceBatchCompleted".
+ */
+export type EvidenceBatchCompleted = EventEnvelope & {
+  schemaVersion?: "0.2.0";
+  eventType?: "EvidenceBatchCompleted";
+  caseId?: string;
+  data?: BatchCompletion;
+  [k: string]: unknown;
+};
+/**
  * This interface was referenced by `ContractTypes`'s JSON-Schema
  * via the `definition` "MilestoneChanged".
  */
@@ -306,6 +319,19 @@ export type CloseOutCaseChanged = EventEnvelope & {
   [k: string]: unknown;
 };
 /**
+ * External Fabric test callback, not a Dataverse change. transitionId identifies one actual BECOMES occurrence; retries preserve it. runId scopes an explicit test reset. Blocked-to-Blocked is not a new transition.
+ *
+ * This interface was referenced by `ContractTypes`'s JSON-Schema
+ * via the `definition` "HeadlessReadiness".
+ */
+export type HeadlessReadiness = EventEnvelope & {
+  schemaVersion?: "0.2.0";
+  eventType?: "HeadlessReadiness";
+  caseId?: string;
+  data?: HeadlessReadinessData;
+  [k: string]: unknown;
+};
+/**
  * Draft logical objects, not physical Dataverse column names. Lifecycle nullability and auxiliary structures require owner review.
  *
  * This interface was referenced by `ContractTypes`'s JSON-Schema
@@ -331,6 +357,21 @@ export type SharedObject =
  * via the `definition` "ActorType".
  */
 export type ActorType = string;
+/**
+ * This interface was referenced by `ContractTypes`'s JSON-Schema
+ * via the `definition` "BatchEvidence".
+ */
+export type BatchEvidence = {
+  [k: string]: unknown;
+} & {
+  evidenceId: string;
+  kind: string;
+  metadata: {
+    [k: string]: unknown;
+  };
+  blob: PinnedBlob;
+  text?: PinnedBlob1;
+};
 
 export interface ContractTypes {
   ReadinessSignal?: ReadinessSignal;
@@ -339,6 +380,7 @@ export interface ContractTypes {
   CodeLists?: CodeLists;
   ArtifactUploaded?: ArtifactUploaded;
   EventEnvelope?: EventEnvelope;
+  EvidenceBatchCompleted?: EvidenceBatchCompleted;
   MilestoneChanged?: MilestoneChanged;
   PhotoUploaded?: PhotoUploaded;
   TicketChanged?: TicketChanged;
@@ -346,7 +388,9 @@ export interface ContractTypes {
   ValidationResultReviewed?: ValidationResultReviewed;
   WorkOrderChanged?: WorkOrderChanged;
   CloseOutCaseChanged?: CloseOutCaseChanged;
+  HeadlessReadiness?: HeadlessReadiness;
   SharedObject?: SharedObject;
+  EvidenceBatch?: EvidenceBatch;
 }
 /**
  * This interface was referenced by `ContractTypes`'s JSON-Schema
@@ -656,6 +700,26 @@ export interface EventEnvelope {
   };
   [k: string]: unknown;
 }
+/**
+ * This interface was referenced by `ContractTypes`'s JSON-Schema
+ * via the `definition` "BatchCompletion".
+ */
+export interface BatchCompletion {
+  runId: string;
+  batchId: string;
+  program: string;
+  manifestSha256: string;
+  /**
+   * @minItems 2
+   */
+  eventIds: [string, string, ...string[]];
+  /**
+   * Agent-submitted assessments are authenticated tool inputs, not independently verified model-response receipts.
+   */
+  validationSource: {
+    [k: string]: unknown;
+  };
+}
 export interface CloseOutCaseChange {
   caseId: string;
   siteId: string;
@@ -667,6 +731,18 @@ export interface CloseOutCaseChange {
    */
   transitionOccurrenceId?: string;
   [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ContractTypes`'s JSON-Schema
+ * via the `definition` "HeadlessReadinessData".
+ */
+export interface HeadlessReadinessData {
+  runId: string;
+  transitionId: string;
+  program: string;
+  factsRevision: string;
+  sourceRef: string;
+  signal: ReadinessSignal;
 }
 /**
  * This interface was referenced by `ContractTypes`'s JSON-Schema
@@ -760,4 +836,51 @@ export interface EntityMatchCandidate {
   decidedAt: string | null;
   survivorId: string | null;
   [k: string]: unknown;
+}
+/**
+ * Isolated synthetic test registration, not a Dataverse upload or an approval. Register before uploading; pin each immutable input with its SHA256 and If-Match ETag.
+ *
+ * This interface was referenced by `ContractTypes`'s JSON-Schema
+ * via the `definition` "EvidenceBatch".
+ */
+export interface EvidenceBatch {
+  schemaVersion: "0.2.0";
+  runId: string;
+  batchId: string;
+  caseId: string;
+  siteId: string;
+  program: string;
+  registeredAt: string;
+  /**
+   * Explicit synthetic baseline used for validation context, never a substitute for the coordinator's native Fabric tool. Seeded validations are not uploaded-inference results.
+   */
+  facts: {
+    [k: string]: unknown;
+  };
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  members: [BatchEvidence, ...BatchEvidence[]];
+}
+/**
+ * This interface was referenced by `ContractTypes`'s JSON-Schema
+ * via the `definition` "PinnedBlob".
+ */
+export interface PinnedBlob {
+  url: string;
+  etag: string;
+  sha256: string;
+  versionId?: string;
+  mediaType: string;
+}
+/**
+ * Optional pinned synthetic text counterpart. It does not imply PDF OCR or document IQ ingestion.
+ */
+export interface PinnedBlob1 {
+  url: string;
+  etag: string;
+  sha256: string;
+  versionId?: string;
+  mediaType: string;
 }

@@ -92,7 +92,11 @@ def validation(snapshot: Snapshot, photo: dict, findings: list[str], timestamp: 
 
 def load_seed(path: Path, contracts: Path) -> Snapshot:
     recipe = json.loads(path.read_text(encoding="utf-8"))
-    if recipe["schemaVersion"] != (contracts / "VERSION").read_text(encoding="utf-8").strip():
+    from shared.contract_compatibility import version
+
+    seed_version = version(recipe["schemaVersion"])
+    current_version = version((contracts / "VERSION").read_text(encoding="utf-8").strip())
+    if seed_version[0] != current_version[0] or seed_version > current_version:
         raise ValueError("Seed schemaVersion does not match the working contracts")
     snapshot = Snapshot(recipe, {kind: {} for kind in KEYS})
     timestamp = recipe["timestamp"]

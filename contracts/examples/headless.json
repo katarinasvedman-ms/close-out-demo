@@ -1,0 +1,76 @@
+{
+  "batch": {
+    "schemaVersion": "0.2.0",
+    "runId": "00000000-0000-4000-8000-000000000100",
+    "batchId": "00000000-0000-4000-8000-000000000101",
+    "caseId": "00000000-0000-4000-8000-000000000042",
+    "siteId": "SE-STO-0042",
+    "program": "CUST-A-5G-ROLLOUT",
+    "registeredAt": "2026-10-29T09:00:00Z",
+    "facts": {},
+    "members": [{
+      "evidenceId": "PHOTO-19",
+      "kind": "photo",
+      "metadata": {
+        "photoId": "PHOTO-19",
+        "artifactId": "STO42-photo-pack",
+        "siteId": "SE-STO-0042",
+        "checklistItemCode": "grounding",
+        "sector": null,
+        "blobUrl": "https://example.blob.core.windows.net/inputs/PHOTO-19.png",
+        "latitude": 59.3293,
+        "longitude": 18.0686,
+        "capturedAt": "2026-10-29T08:00:00Z",
+        "uploadedBy": "synthetic-operator",
+        "replacesPhotoId": null,
+        "isCurrent": true
+      },
+      "blob": {
+        "url": "https://example.blob.core.windows.net/inputs/PHOTO-19.png",
+        "etag": "\"synthetic-etag\"",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "mediaType": "image/png"
+      }
+    }]
+  },
+  "callback": {
+    "schemaVersion": "0.2.0",
+    "eventType": "HeadlessReadiness",
+    "eventId": "00000000-0000-4000-8000-000000000102",
+    "caseId": "00000000-0000-4000-8000-000000000042",
+    "siteId": "SE-STO-0042",
+    "occurredAt": "2026-10-29T09:01:00Z",
+    "producer": "fabric.activator.synthetic-test",
+    "data": {
+      "runId": "00000000-0000-4000-8000-000000000100",
+      "transitionId": "00000000-0000-4000-8000-000000000103",
+      "program": "CUST-A-5G-ROLLOUT",
+      "factsRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sourceRef": "fabric:headless:synthetic-example",
+      "signal": {
+        "caseId": "00000000-0000-4000-8000-000000000042",
+        "siteId": "SE-STO-0042",
+        "readiness": "Blocked",
+        "readinessMissing": ["CHK-A-GROUNDING"],
+        "evaluatedAt": "2026-10-29T09:01:00Z"
+      }
+    }
+  },
+  "completion": {
+    "schemaVersion": "0.2.0",
+    "eventType": "EvidenceBatchCompleted",
+    "eventId": "00000000-0000-4000-8000-000000000104",
+    "caseId": "00000000-0000-4000-8000-000000000042",
+    "siteId": "SE-STO-0042",
+    "occurredAt": "2026-10-29T09:01:00Z",
+    "producer": "azure.validation.synthetic-test",
+    "data": {
+      "runId": "00000000-0000-4000-8000-000000000100",
+      "batchId": "00000000-0000-4000-8000-000000000101",
+      "program": "CUST-A-5G-ROLLOUT",
+      "manifestSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "eventIds": ["00000000-0000-4000-8000-000000000105", "00000000-0000-4000-8000-000000000106"],
+      "validationSource": "live-foundry-inference"
+    }
+  }
+}

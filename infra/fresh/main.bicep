@@ -19,6 +19,21 @@ param modelCapacity int = 30
 @allowed(['User', 'ServicePrincipal'])
 param operatorPrincipalType string = 'User'
 
+@description('Existing single-tenant Entra API registration client ID, with identifier URI api://<client-id>. Create manually before deployment; no secret is required for this registration.')
+@minLength(36)
+@maxLength(36)
+param flowApiClientId string
+@description('Exact object ID of the approved Fabric callback caller. This is not a connection ID or application client ID.')
+@minLength(36)
+@maxLength(36)
+param fabricDispatchPrincipalId string
+@description('Existing Fabric Eventstream custom endpoint namespace FQDN; no Fabric resource is provisioned.')
+@minLength(1)
+param eventstreamNamespace string
+@description('Existing Fabric Eventstream custom endpoint entity name.')
+@minLength(1)
+param eventstreamEntity string
+
 var operatorPrincipalId = deployer().objectId
 var suffix = uniqueString(resourceGroup().id, foundryName)
 var tags = { 'azd-env-name': foundryName }
@@ -44,7 +59,7 @@ resource foundry 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
     identity: { type: 'SystemAssigned' }
     properties: {
       displayName: projectName
-      description: 'Read-only synthetic close-out demonstration.'
+      description: 'Synthetic evidence assessment and read-only close-out drafting; no approvals or system-of-record writes.'
     }
   }
 }
@@ -92,6 +107,35 @@ module knowledgeConnections '../knowledge/connection.bicep' = {
     searchEndpoint: knowledge.outputs.searchEndpoint
     searchResourceId: knowledge.outputs.searchResourceId
     searchPrincipalId: knowledge.outputs.searchPrincipalId
+  }
+}
+
+module flow '../flow/main.bicep' = {
+  name: 'close-out-playground-flow'
+  params: {
+    environmentName: take(foundryName, 24)
+    location: location
+    projectResourceId: foundry::project.id
+    adapterClientId: flowApiClientId
+    adapterAudience: 'api://${flowApiClientId}'
+    fabricDispatchPrincipalId: fabricDispatchPrincipalId
+    enableCoordinatorDispatch: false
+    enableBlobValidation: false
+    uploadOperatorPrincipalId: operatorPrincipalId
+    uploadOperatorPrincipalType: operatorPrincipalType
+    publisherPrincipalId: foundry::project.identity.principalId
+    eventstreamNamespace: eventstreamNamespace
+    eventstreamEntity: eventstreamEntity
+    allowPublicNetworkAccess: true
+    tags: tags
+    foundryConfig: {
+      endpoint: foundry::project.properties.endpoints['AI Foundry API']
+      deployment: model.outputs.deploymentName
+      model: modelName
+      modelVersion: modelVersion
+      validation: { name: 'close-out-validation', version: 'pending-publication', definitionHash: 'pending-publication' }
+      closeout: { name: 'close-out-coordinator', version: 'pending-publication', definitionHash: 'pending-publication' }
+    }
   }
 }
 
@@ -148,6 +192,7 @@ output tenantId string = tenant().tenantId
 output foundryName string = foundry.name
 output projectName string = foundry::project.name
 output projectResourceId string = foundry::project.id
+output projectPrincipalId string = foundry::project.identity.principalId
 output projectEndpoint string = foundry::project.properties.endpoints['AI Foundry API']
 output modelDeploymentName string = model.outputs.deploymentName
 output modelName string = modelName
@@ -167,3 +212,13 @@ output knowledgeModel object = {
   }
 }
 output applicationInsightsResourceId string = insights.id
+output flow object = {
+  workflowName: flow.outputs.workflowName
+  adapterName: flow.outputs.adapterName
+  storageUrl: flow.outputs.storageUrl
+  workflowPrincipalId: flow.outputs.workflowPrincipalId
+  adapterPrincipalId: flow.outputs.adapterPrincipalId
+  publisherConfig: flow.outputs.publisherConfig
+}
+@description('Run after ARM succeeds. Publishes both agent definitions, native IQ and the runtime/workflow ZIPs. No inference or Fabric item deployment. Complete manual grants, documents, callback and enablement before use.')
+output publishDefinitionsCommand string = 'uv run --frozen --extra agents --extra flow python -m agents.bootstrap --resource-group "${resourceGroup().name}" --deployment "${deployment().name}" --create-fabric-connection --publish-flow'

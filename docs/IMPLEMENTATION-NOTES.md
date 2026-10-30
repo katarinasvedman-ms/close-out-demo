@@ -7,13 +7,55 @@
 
 ## Current execution mode
 
+The selected reduced flow now starts in the validation playground: its publish-only
+OpenAPI tool sends an assessment through the publisher Function to existing Fabric;
+Fabric dispatch calls Logic Apps, which directly invokes the coordinator, waits,
+and saves its raw completed response to Blob. No coordinator Function participates.
+The fresh template includes Azure hosting; its bootstrap output
+publishes both versioned prompt definitions, target-specific validation OpenAPI
+and ZIPs. Publication leaves workflows Disabled. Fabric sharing, callback,
+projector/document readiness and enablement are explicit manual steps in
+`MANUAL_STEPS.md`. The public button and bootstrap must use the same published
+revision; fresh-target acceptance is not claimed. Fabric callback credentials,
+delegated notebook execution and Azure
+Files host keys mean the current implementation is not all-managed-identity.
+The following paragraphs retain earlier implementation history; see
+`HEADLESS-FLOW.md` for the selected path.
+
 The user authorized implementation against provisional v0.1.0 contracts without waiting for cross-track sign-off; full end-to-end integration may not be needed. Local seed expansion, synthetic evidence, readiness/event replay and a scoped stdio Data Agent MCP stub now run through `uv run --frozen python -m shared.local_demo`. See README for the implemented commands and limitations. The architecture and build order below remain targets for live delivery, not a claim that those components exist.
 
 The current deployment publishes Foundry prompt agents and native IQ, not a hosted
-agent or application container. The local Python client supplies synthetic facts
-for verification only; native Fabric Data Agent MCP integration remains separate.
+agent or application container. The default local client supplies stub facts.
+An explicit native Fabric IQ test configuration instead uses the existing external
+Data Agent, with a separate KQL snapshot for deterministic output verification.
+Fabric is not part of deployment; its manually refreshed test fixtures use seeded
+validation outcomes, not production event/readiness or Dataverse integration.
+See `FOUNDRY-IQ.md` for the verified three-case local test path.
 The portal template and completion command are described in `DEPLOY-TO-AZURE.md`.
 The broader azd project/workflows below remain implementation targets.
+
+The reduced headless test increment has local draft v0.2.0 evidence/callback
+contracts, Blob upload/validation and coordinator adapters, durable outbox,
+Standard workflow definitions, ZIP packaging and opt-in `infra/flow` Bicep.
+It omits Event Grid, Service Bus, Power Platform and UI; the Event Hubs SDK sends
+directly to Fabric Eventstream's compatible endpoint, not a new Event Hubs service.
+The authorized optional foundation and workflow/Function code are deployed after
+the user applied the selected group's security exception and host-secret identity
+ordering was repaired. A real Blob upload triggered managed-identity Foundry
+validation, caching inference/outbox across retries. The user-approved sender
+Contributor grant resolved Eventstream authorization; the same inference's seven
+events were published and their actual ingestion verified. Validation v4 fixes
+the observed azimuth tolerance failure using actual numeric observations and an
+RFDS policy check. A Fabric-owned scheduled notebook now reads registrations
+and events and persists immutable readiness history. The main Blocked-to-Ready,
+open-rework, fallback and NotReady paths were verified through actual scheduled
+jobs. After the callback connector rejected WorkspaceIdentity, the user
+authorized a dedicated app-only credential, now stored in Key Vault/Fabric.
+Actual Fabric Web activity authentication and anonymous denial are verified.
+Activator/dispatch stays stopped pending workflow-trigger delivery, live native
+Data Agent exposure and coordinator acceptance. Existing MI/IQ bindings are
+unchanged. See `HEADLESS-FLOW.md` for schedule limits,
+identity distinctions and the exact remaining gates.
 
 Unresolved physical mappings, platform payloads, approval provenance and MCP authentication remain isolated from the local stubs. Revisit them before connecting live services. This execution choice does not authorize cloud provisioning or waive the process decision rights.
 

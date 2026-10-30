@@ -1,0 +1,86 @@
+let snapshots = CloseoutContractFixturesV01
+| summarize arg_max(importedAt, *) by scenario, siteId, program
+| extend fixtureKey = strcat(scenario, ':', siteId);
+let validations = snapshots
+| mv-expand validation = facts.validations
+| where isnotempty(validation.photoId)
+| extend photoId = tostring(validation.photoId), validatedAt = todatetime(validation.validatedAt);
+let newest = validations | summarize newestAt = max(validatedAt) by fixtureKey, photoId;
+let acceptedResults = validations
+| join kind=inner newest on fixtureKey, photoId
+| where validatedAt == newestAt
+| summarize decisions = make_set(tostring(pack_array(validation.compliant, validation.reviewStatus, validation.confidence))),
+    result = take_any(validation), threshold = take_any(toreal(facts['project'].lowConfidenceThreshold))
+    by fixtureKey, photoId
+| extend accepted = array_length(decisions) == 1 and tobool(result.compliant)
+    and (tostring(result.reviewStatus) == 'Confirmed'
+        or (tostring(result.reviewStatus) == 'Auto' and toreal(result.confidence) >= threshold));
+let artifacts = snapshots
+| mv-expand artifact = facts.artifacts
+| project fixtureKey, artifactId = tostring(artifact.artifactId),
+    requirementId = tostring(artifact.requirementId), artifactStatus = tostring(artifact.status);
+let requirements = snapshots
+| mv-expand requirement = facts.requirements
+| where tobool(requirement.mandatory)
+| project fixtureKey, requirementId = tostring(requirement.requirementId),
+    artifactType = tostring(requirement.artifactType);
+let acceptedPhotos = snapshots
+| mv-expand photo = facts.photos
+| where tobool(photo.isCurrent)
+| project fixtureKey, photoId = tostring(photo.photoId),
+    artifactId = tostring(photo.artifactId), itemCode = tostring(photo.checklistItemCode)
+| join kind=inner artifacts on fixtureKey, artifactId
+| join kind=inner acceptedResults on fixtureKey, photoId
+| where accepted
+| summarize hasAccepted = count() > 0 by fixtureKey, requirementId, itemCode;
+let photoMissing = snapshots
+| mv-expand item = facts.checklist
+| where tobool(item.mandatory)
+| project fixtureKey, requirementId = tostring(item.requirementId),
+    itemCode = tostring(item.itemCode), conditionId = tostring(item.checklistItemId)
+| join kind=inner (requirements | where artifactType == 'photo_pack') on fixtureKey, requirementId
+| join kind=leftouter acceptedPhotos on fixtureKey, requirementId, itemCode
+| where isnull(hasAccepted)
+| project fixtureKey, conditionId;
+let artifactMissing = requirements
+| where artifactType != 'photo_pack'
+| join kind=leftouter (
+    artifacts | where artifactStatus == 'Validated'
+    | summarize hasValidated = count() > 0 by fixtureKey, requirementId
+) on fixtureKey, requirementId
+| where isnull(hasValidated)
+| project fixtureKey, conditionId = requirementId;
+let ticketMissing = snapshots
+| mv-expand ticket = facts.tickets
+| where tobool(ticket.blocking) and tostring(ticket.status) != 'Closed'
+| project fixtureKey, conditionId = tostring(ticket.ticketId);
+let workMissing = snapshots
+| mv-expand work = facts.workOrders
+| where tostring(work.caseId) == tostring(facts.caseId)
+    and tostring(work.workOrderType) == 'Rework' and tostring(work.status) != 'Closed'
+| project fixtureKey, conditionId = tostring(work.workOrderId);
+let unmetConditions = union photoMissing, artifactMissing, ticketMissing, workMissing
+| summarize readinessMissing = make_set(conditionId) by fixtureKey;
+let construction = snapshots
+| mv-expand milestone = facts.milestones
+| summarize constructionComplete = countif(
+    tostring(milestone.milestoneType) == 'ConstructionComplete'
+    and tostring(milestone.status) == 'Actualized') > 0 by fixtureKey;
+snapshots
+| join kind=leftouter unmetConditions on fixtureKey
+| join kind=leftouter construction on fixtureKey
+| extend readinessMissing = array_sort_asc(coalesce(readinessMissing, dynamic([]))),
+    constructionComplete = coalesce(constructionComplete, false)
+| extend readiness = case(not(constructionComplete), 'NotReady',
+    array_length(readinessMissing) > 0, 'Blocked', 'Ready')
+| extend sourceRef = strcat('fabric:contract-v01:', scenario, ':', siteId, ':', seedHash),
+    evaluatedAt = now()
+| extend facts = bag_set_key(facts, '$.readiness', readiness)
+| extend facts = bag_set_key(facts, '$.readinessMissing', readinessMissing)
+| extend facts = bag_set_key(facts, '$.constructionComplete', constructionComplete)
+| extend facts = bag_set_key(facts, '$.site.readiness', readiness)
+| extend facts = bag_set_key(facts, '$.site.readinessMissing', readinessMissing)
+| extend facts = bag_set_key(facts, '$.site.readinessEvaluatedAt', tostring(evaluatedAt))
+| project schemaVersion, scenario, siteId, program, caseId = tostring(facts.caseId),
+    seedHash, importedAt, evaluatedAt, sourceRef, readiness, readinessMissing,
+    constructionComplete, facts

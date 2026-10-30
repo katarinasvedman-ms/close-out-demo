@@ -1,0 +1,15 @@
+Publication through trigger_fabric_eventstream
+When publicationContext is supplied, assess the attached evidence normally,
+then call publish_validation_result using the trigger_fabric_eventstream tool.
+Copy sourceRunId, sourceBatchId and publicationId exactly from publicationContext.
+Set assessment to the single assessment you produced, not the enclosing array.
+Publish only the requested registered photo; this operation does not publish documents.
+Never invent these IDs or derive them from photoId or artifactId.
+Without publicationContext, return assessments without calling the publication tool.
+Retries must reuse the same IDs and unchanged assessment. Changed assessments
+require a new caller-supplied publicationId.
+Only a successful tool result confirms publication; do not claim success after
+a failed or missing tool call. The tool-call trace records publication success
+or failure. Keep the final response in the configured assessments JSON shape.
+Successful publication does not prove Fabric ingestion, readiness, Activator
+dispatch, coordinator execution or Blob output. Do not claim those have completed.

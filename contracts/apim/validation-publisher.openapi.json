@@ -1,0 +1,177 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Close-out synthetic assessment publisher",
+    "version": "0.3.0",
+    "description": "Publishes one submitted photo assessment against registered synthetic evidence. Does not invoke a model, verify its response, approve evidence or change readiness."
+  },
+  "servers": [
+    {
+      "url": "https://configure-your-function.azurewebsites.net"
+    }
+  ],
+  "paths": {
+    "/api/publish-validation-result": {
+      "post": {
+        "operationId": "publish_validation_result",
+        "description": "Publish one assessment using the exact supplied source registration IDs. Use a supplied fresh publicationId; never invent evidence identifiers. Retry with the same publicationId and unchanged assessment. Changed assessments require a new publicationId. Returns published event IDs, not readiness or downstream completion.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishAssessment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Events published; Fabric ingestion/projection is separate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "batchId": {
+                      "type": "string"
+                    },
+                    "validationResultId": {
+                      "type": "string"
+                    },
+                    "eventIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "validationSource": {
+                      "type": "string"
+                    },
+                    "resultKey": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid assessment or registration"
+          },
+          "403": {
+            "description": "Calling identity is not the authorized publisher"
+          },
+          "409": {
+            "description": "Publication ID reused with changed input"
+          },
+          "429": {
+            "description": "Publication is already claimed; retry unchanged"
+          },
+          "503": {
+            "description": "Dependency failure; retry unchanged"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Assessment": {
+        "additionalProperties": false,
+        "properties": {
+          "evidenceId": {
+            "minLength": 1,
+            "title": "Evidenceid",
+            "type": "string"
+          },
+          "compliant": {
+            "title": "Compliant",
+            "type": "boolean"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "findings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "rfdsReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rfdsreference"
+          },
+          "observedAzimuthDegrees": {
+            "anyOf": [
+              {
+                "maximum": 360,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observedazimuthdegrees"
+          }
+        },
+        "required": [
+          "evidenceId",
+          "compliant",
+          "confidence",
+          "findings",
+          "rfdsReference",
+          "observedAzimuthDegrees"
+        ],
+        "title": "Assessment",
+        "type": "object"
+      },
+      "PublishAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "sourceRunId": {
+            "title": "Sourcerunid",
+            "type": "string"
+          },
+          "sourceBatchId": {
+            "title": "Sourcebatchid",
+            "type": "string"
+          },
+          "publicationId": {
+            "title": "Publicationid",
+            "type": "string"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/Assessment"
+          }
+        },
+        "required": [
+          "sourceRunId",
+          "sourceBatchId",
+          "publicationId",
+          "assessment"
+        ],
+        "title": "PublishAssessment",
+        "type": "object"
+      }
+    }
+  }
+}

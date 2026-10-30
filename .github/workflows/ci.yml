@@ -15,6 +15,7 @@ jobs:
       - run: az bicep install --version v0.39.26
       - run: az bicep build --file infra/models.bicep --stdout > /dev/null
       - run: az bicep build --file infra/knowledge/main.bicep --stdout > /dev/null
+      - run: az bicep build --file infra/flow/main.bicep --stdout > /dev/null
       - run: az bicep build --file infra/fresh/main.bicep --outfile infra/fresh/azuredeploy.json
       - run: git diff --exit-code -- infra/fresh/azuredeploy.json
 
@@ -28,10 +29,10 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.9.7"
-      - run: uv sync --frozen --extra dev --extra agents
+      - run: uv sync --frozen --extra dev --extra agents --extra flow
       - run: uv run --frozen --extra dev ruff check .
       - run: uv run --frozen --extra dev ruff format --check .
-      - run: uv run --frozen --extra dev --extra agents pytest -m "not integration"
+      - run: uv run --frozen --extra dev --extra agents --extra flow pytest -m "not integration"
       - run: uv run --frozen --extra dev python -m shared.contract_validation
 
   presenter:

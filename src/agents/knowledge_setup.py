@@ -1,4 +1,4 @@
-"""Populate one native Blob knowledge source for the operator-only synthetic demo."""
+"""Configure native Blob IQ, with optional synthetic document population."""
 
 import argparse
 import hashlib
@@ -100,24 +100,72 @@ def indexed_documents_match(rows: list[dict], uploads: list[dict]) -> bool:
     return True
 
 
+def knowledge_settings(values: dict, sites: list[str], name: str = "close-out-demo"):
+    if not values.get("knowledgeModel"):
+        raise ValueError("Re-deploy knowledge infrastructure with its retrieval model binding")
+    return KnowledgeSettings(
+        searchEndpoint=values["searchEndpoint"],
+        connectionName=values["connectionName"],
+        knowledgeBase=values.get("knowledgeBaseName", name),
+        sites=sorted(set(sites)),
+        blobRoot=f"{values['storageEndpoint'].rstrip('/')}/{values['containerName']}/iq/",
+    )
+
+
+def configure_native(search, knowledge, values, source):
+    for path, body in native_definitions(
+        knowledge.knowledgeBase,
+        source,
+        values["storageResourceId"],
+        values["containerName"],
+        values["knowledgeModel"],
+    ).items():
+        search.request("PUT", path, body)
+    configured = search.request("GET", f"knowledgesources/{source}")
+    base = search.request("GET", f"knowledgebases/{knowledge.knowledgeBase}")
+    if (
+        configured["name"] != source
+        or configured["kind"] != "azureBlob"
+        or base["name"] != knowledge.knowledgeBase
+        or not any(reference["name"] == source for reference in base["knowledgeSources"])
+    ):
+        raise ValueError("Search did not retain the expected native Blob IQ definitions")
+    return configured["azureBlobParameters"]["createdResources"]
+
+
 def provision(args):
     from azure.identity import AzureCliCredential
-    from azure.storage.blob import BlobServiceClient, ContentSettings
 
     outputs = json.loads(args.infra.read_text(encoding="utf-8-sig"))
     values = {key: value["value"] for key, value in outputs.items()}
-    if not values.get("knowledgeModel"):
-        raise ValueError("Re-deploy knowledge infrastructure with its retrieval model binding")
     snapshot = load_seed(args.root / "seed" / "seed.json", args.root / "contracts")
     if not args.site or set(args.site) - set(snapshot.tables["Site"]):
         raise ValueError("Select known synthetic sites explicitly")
-    knowledge = KnowledgeSettings(
-        searchEndpoint=values["searchEndpoint"],
-        connectionName=values["connectionName"],
-        knowledgeBase=values.get("knowledgeBaseName", args.knowledge_base),
-        sites=sorted(set(args.site)),
-        blobRoot=f"{values['storageEndpoint'].rstrip('/')}/{values['containerName']}/iq/",
+    knowledge = knowledge_settings(values, args.site, args.knowledge_base)
+    with AzureCliCredential() as credential:
+        search = SearchSetup(knowledge.searchEndpoint, credential)
+        try:
+            created = configure_native(search, knowledge, values, args.source_name)
+        finally:
+            search.close()
+    write_json(args.output, knowledge.model_dump())
+    write_json(
+        args.output.with_name("knowledge-definition-receipt.json"),
+        {
+            "source": args.source_name,
+            "knowledgeBase": knowledge.knowledgeBase,
+            "kind": "azureBlob",
+            "createdResources": created,
+            "definitionsVerified": True,
+            "documentVerification": "not-run",
+        },
     )
+    if args.definitions_only:
+        print(json.dumps({"knowledge": str(args.output), "phase": "definitions"}))
+        return
+
+    from azure.storage.blob import BlobServiceClient, ContentSettings
+
     manifest = json.loads((args.assets / "assets-manifest.json").read_text(encoding="utf-8"))
     expected_hashes = {entry["path"]: entry["sha256"] for entry in manifest}
     uploads = []
@@ -161,17 +209,6 @@ def provision(args):
         search = SearchSetup(knowledge.searchEndpoint, credential)
         try:
             source = args.source_name
-            for path, body in native_definitions(
-                knowledge.knowledgeBase,
-                source,
-                values["storageResourceId"],
-                values["containerName"],
-                values["knowledgeModel"],
-            ).items():
-                search.request("PUT", path, body)
-            created = search.request("GET", f"knowledgesources/{source}")["azureBlobParameters"][
-                "createdResources"
-            ]
             for _ in range(180):
                 status = search.request("GET", f"knowledgesources/{source}/status")
                 last = status.get("lastSynchronizationState") or {}
@@ -208,6 +245,11 @@ def main():
     parser.add_argument("--site", action="append", required=True)
     parser.add_argument("--knowledge-base", default="close-out-demo")
     parser.add_argument("--source-name", default="close-out-documents")
+    parser.add_argument(
+        "--definitions-only",
+        action="store_true",
+        help="Publish IQ definitions without document uploads or ingestion checks",
+    )
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--assets", type=Path, default=Path(".local") / "demo")
     parser.add_argument(

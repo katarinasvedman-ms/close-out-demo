@@ -5,8 +5,9 @@ import json
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class StrictOutput(BaseModel):
@@ -19,6 +20,7 @@ class Assessment(StrictOutput):
     confidence: float = Field(ge=0, le=1)
     findings: list[str]
     rfdsReference: str | None
+    observedAzimuthDegrees: float | None = Field(ge=0, le=360)
 
 
 class Assessments(StrictOutput):
@@ -114,6 +116,65 @@ class KnowledgeSettings(StrictOutput):
         return value.rstrip("/")
 
 
+class FabricSettings(StrictOutput):
+    workspaceId: str
+    dataAgentId: str
+    databaseId: str
+    kustoEndpoint: str
+    connectionName: str = Field(pattern=r"^[a-zA-Z0-9_-]+$")
+    toolName: str = Field(pattern=r"^DataAgent_[a-zA-Z0-9_-]+$")
+
+    @field_validator("workspaceId", "dataAgentId", "databaseId")
+    @classmethod
+    def identifier(cls, value: str) -> str:
+        return str(UUID(value))
+
+    @field_validator("kustoEndpoint")
+    @classmethod
+    def kusto_endpoint(cls, value: str) -> str:
+        url = urlsplit(value)
+        if (
+            url.scheme != "https"
+            or not url.hostname
+            or not url.hostname.endswith(".kusto.fabric.microsoft.com")
+            or url.username
+            or url.password
+            or url.port not in (None, 443)
+            or url.path.strip("/")
+            or url.query
+            or url.fragment
+        ):
+            raise ValueError("An HTTPS Fabric Eventhouse KQL endpoint is required")
+        return value.rstrip("/")
+
+    def mcp_url(self) -> str:
+        return (
+            f"https://api.fabric.microsoft.com/v1/mcp/workspaces/{self.workspaceId}"
+            f"/dataagents/{self.dataAgentId}/agent"
+        )
+
+
+class PublisherSettings(StrictOutput):
+    serverUrl: str
+    audience: str = Field(min_length=1)
+
+    @field_validator("serverUrl")
+    @classmethod
+    def publisher_endpoint(cls, value: str) -> str:
+        url = urlsplit(value)
+        if (
+            url.scheme != "https"
+            or not url.hostname
+            or url.username
+            or url.password
+            or url.path not in {"", "/"}
+            or url.query
+            or url.fragment
+        ):
+            raise ValueError("An HTTPS publisher origin without credentials or a path is required")
+        return value.rstrip("/")
+
+
 class FoundrySettings(StrictOutput):
     endpoint: str
     deployment: str
@@ -122,6 +183,14 @@ class FoundrySettings(StrictOutput):
     validation: AgentBinding
     closeout: AgentBinding
     knowledge: KnowledgeSettings | None = None
+    fabric: FabricSettings | None = None
+    publisher: PublisherSettings | None = None
+
+    @model_validator(mode="after")
+    def fabric_requires_knowledge(self):
+        if self.fabric and not self.knowledge:
+            raise ValueError("Native Fabric testing requires the document IQ binding")
+        return self
 
     @field_validator("endpoint")
     @classmethod
@@ -152,6 +221,8 @@ def definition(
     kind: str,
     deployment: str,
     knowledge: KnowledgeSettings | None = None,
+    fabric: FabricSettings | None = None,
+    publisher: PublisherSettings | None = None,
 ) -> dict:
     if kind not in {"validation", "closeout"}:
         raise ValueError(f"Unknown agent kind: {kind}")
@@ -198,6 +269,41 @@ def definition(
                 "project_connection_id": knowledge.connectionName,
                 "require_approval": "never",
                 "allowed_tools": ["knowledge_base_retrieve"],
+            }
+        ]
+    if kind == "closeout" and fabric:
+        if not knowledge:
+            raise ValueError("Native Fabric testing requires the document IQ binding")
+        body["instructions"] = (
+            Path(__file__).parent / "prompts" / "closeout-fabric.txt"
+        ).read_text(encoding="utf-8")
+        body["tools"] = [tool for tool in body["tools"] if tool["type"] != "function"] + [
+            {
+                "type": "fabric_iq_preview",
+                "server_label": "fabric-facts",
+                "server_url": fabric.mcp_url(),
+                "project_connection_id": fabric.connectionName,
+                "require_approval": "never",
+            }
+        ]
+    if kind == "validation" and publisher:
+        from agents.flow_publish import openapi_document
+
+        body["instructions"] += "\n\n" + (
+            Path(__file__).parent / "prompts" / "validation-publication.txt"
+        ).read_text(encoding="utf-8")
+        body["tools"] = [
+            {
+                "type": "openapi",
+                "openapi": {
+                    "name": "trigger_fabric_eventstream",
+                    "description": "Publish one assessment against registered synthetic evidence.",
+                    "spec": openapi_document(publisher.serverUrl),
+                    "auth": {
+                        "type": "managed_identity",
+                        "security_scheme": {"audience": publisher.audience},
+                    },
+                },
             }
         ]
     return body

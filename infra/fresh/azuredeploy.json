@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "12176180710946240194"
+      "templateHash": "4769754074271963645"
     }
   },
   "parameters": {
@@ -62,6 +62,36 @@
       "metadata": {
         "description": "User for portal deployments; override for service-principal automation."
       }
+    },
+    "flowApiClientId": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "metadata": {
+        "description": "Existing single-tenant Entra API registration client ID, with identifier URI api://<client-id>. Create manually before deployment; no secret is required for this registration."
+      }
+    },
+    "fabricDispatchPrincipalId": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "metadata": {
+        "description": "Exact object ID of the approved Fabric callback caller. This is not a connection ID or application client ID."
+      }
+    },
+    "eventstreamNamespace": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Existing Fabric Eventstream custom endpoint namespace FQDN; no Fabric resource is provisioned."
+      }
+    },
+    "eventstreamEntity": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Existing Fabric Eventstream custom endpoint entity name."
+      }
     }
   },
   "variables": {
@@ -84,7 +114,7 @@
       },
       "properties": {
         "displayName": "[parameters('projectName')]",
-        "description": "Read-only synthetic close-out demonstration."
+        "description": "Synthetic evidence assessment and read-only close-out drafting; no approvals or system-of-record writes."
       },
       "dependsOn": [
         "[resourceId('Microsoft.CognitiveServices/accounts', parameters('foundryName'))]"
@@ -626,6 +656,745 @@
         "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('foundryName'), parameters('projectName'))]",
         "[resourceId('Microsoft.Resources/deployments', 'close-out-knowledge-resources')]"
       ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "close-out-playground-flow",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "environmentName": {
+            "value": "[take(parameters('foundryName'), 24)]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "projectResourceId": {
+            "value": "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('foundryName'), parameters('projectName'))]"
+          },
+          "adapterClientId": {
+            "value": "[parameters('flowApiClientId')]"
+          },
+          "adapterAudience": {
+            "value": "[format('api://{0}', parameters('flowApiClientId'))]"
+          },
+          "fabricDispatchPrincipalId": {
+            "value": "[parameters('fabricDispatchPrincipalId')]"
+          },
+          "enableCoordinatorDispatch": {
+            "value": false
+          },
+          "enableBlobValidation": {
+            "value": false
+          },
+          "uploadOperatorPrincipalId": {
+            "value": "[variables('operatorPrincipalId')]"
+          },
+          "uploadOperatorPrincipalType": {
+            "value": "[parameters('operatorPrincipalType')]"
+          },
+          "publisherPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('foundryName'), parameters('projectName')), '2025-06-01', 'full').identity.principalId]"
+          },
+          "eventstreamNamespace": {
+            "value": "[parameters('eventstreamNamespace')]"
+          },
+          "eventstreamEntity": {
+            "value": "[parameters('eventstreamEntity')]"
+          },
+          "allowPublicNetworkAccess": {
+            "value": true
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "foundryConfig": {
+            "value": {
+              "endpoint": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('foundryName'), parameters('projectName')), '2025-06-01').endpoints['AI Foundry API']]",
+              "deployment": "[reference(resourceId('Microsoft.Resources/deployments', 'close-out-model'), '2025-04-01').outputs.deploymentName.value]",
+              "model": "[parameters('modelName')]",
+              "modelVersion": "[parameters('modelVersion')]",
+              "validation": {
+                "name": "close-out-validation",
+                "version": "pending-publication",
+                "definitionHash": "pending-publication"
+              },
+              "closeout": {
+                "name": "close-out-coordinator",
+                "version": "pending-publication",
+                "definitionHash": "pending-publication"
+              }
+            }
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "1865693265149421452"
+            }
+          },
+          "parameters": {
+            "environmentName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "swedencentral"
+            },
+            "projectResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Existing Foundry project; no model, connection or Fabric item is created."
+              }
+            },
+            "adapterClientId": {
+              "type": "string",
+              "metadata": {
+                "description": "Approved existing Entra API registration protecting the invocation adapter."
+              }
+            },
+            "adapterAudience": {
+              "type": "string"
+            },
+            "fabricDispatchPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Approved external Fabric dispatch identity. Empty keeps the coordinator disabled and denies callback access; does not grant Fabric workspace access."
+              }
+            },
+            "enableCoordinatorDispatch": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable only after verifying the explicit external bindings and identity grants. Callback authentication alone does not prove native tools or a completed response."
+              }
+            },
+            "enableBlobValidation": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Keep false for the playground publication path; true retains the separate Blob-triggered inference path."
+              }
+            },
+            "uploadOperatorPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional explicitly selected operator allowed to upload synthetic batches and read receipts."
+              }
+            },
+            "uploadOperatorPrincipalType": {
+              "type": "string",
+              "defaultValue": "User",
+              "allowedValues": [
+                "User",
+                "ServicePrincipal"
+              ]
+            },
+            "publisherPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional explicitly authorized Foundry project managed identity for the publish-only assessment tool; cannot invoke validation/coordinator routes."
+              }
+            },
+            "eventstreamNamespace": {
+              "type": "string"
+            },
+            "eventstreamEntity": {
+              "type": "string"
+            },
+            "foundryConfig": {
+              "type": "object",
+              "metadata": {
+                "description": "Pinned new prompt versions and existing native IQ bindings. Contains no credentials."
+              }
+            },
+            "allowPublicNetworkAccess": {
+              "type": "bool",
+              "metadata": {
+                "description": "Explicit networking decision for this new optional target."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            }
+          },
+          "variables": {
+            "suffix": "[uniqueString(resourceGroup().id, parameters('environmentName'), 'headless-v02')]",
+            "names": {
+              "data": "[format('stflow{0}', variables('suffix'))]",
+              "host": "[format('sthost{0}', variables('suffix'))]",
+              "vault": "[format('kv-flow-{0}', variables('suffix'))]",
+              "workflow": "[format('logic-{0}-{1}', parameters('environmentName'), variables('suffix'))]",
+              "adapter": "[format('func-{0}-{1}', parameters('environmentName'), variables('suffix'))]"
+            },
+            "networkAccess": "[if(parameters('allowPublicNetworkAccess'), 'Enabled', 'Disabled')]",
+            "blobReader": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')]",
+            "blobContributor": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+            "vaultReader": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+            "projectParts": "[split(parameters('projectResourceId'), '/')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[variables('names').data]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true,
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": false,
+                "publicNetworkAccess": "[variables('networkAccess')]"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', variables('names').data, 'default')]",
+              "properties": {
+                "isVersioningEnabled": true,
+                "deleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('names').data)]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "containers",
+                "count": "[length(createArray('inputs', 'ledger', 'results'))]"
+              },
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()])]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('names').data, 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[variables('names').host]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true,
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": true,
+                "publicNetworkAccess": "[variables('networkAccess')]"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', variables('names').host, 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('names').host)]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', variables('names').host, 'default', 'workflow-content')]",
+              "properties": {
+                "shareQuota": 5
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('names').host, 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', variables('names').host, 'default', 'adapter-content')]",
+              "properties": {
+                "shareQuota": 5
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('names').host, 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[variables('names').vault]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "tenantId": "[tenant().tenantId]",
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 7,
+                "publicNetworkAccess": "[variables('networkAccess')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', variables('names').vault, 'workflow-host-storage')]",
+              "properties": {
+                "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('names').host, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('names').host), '2023-05-01').keys[0].value, environment().suffixes.storage)]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('names').host)]",
+                "[resourceId('Microsoft.KeyVault/vaults', variables('names').vault)]"
+              ]
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('id-flow-host-{0}', variables('suffix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('names').vault)]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('names').vault), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix'))), variables('vaultReader'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix'))), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('vaultReader')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix')))]",
+                "[resourceId('Microsoft.KeyVault/vaults', variables('names').vault)]"
+              ]
+            },
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[format('log-flow-{0}', variables('suffix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "retentionInDays": 30,
+                "sku": {
+                  "name": "PerGB2018"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[format('appi-flow-{0}', variables('suffix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', format('log-flow-{0}', variables('suffix')))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', format('log-flow-{0}', variables('suffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[format('asp-workflow-{0}', variables('suffix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "elastic",
+              "sku": {
+                "name": "WS1",
+                "tier": "WorkflowStandard",
+                "capacity": 1
+              },
+              "properties": {
+                "reserved": false
+              }
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[format('asp-adapter-{0}', variables('suffix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "elastic",
+              "sku": {
+                "name": "EP1",
+                "tier": "ElasticPremium",
+                "capacity": 1
+              },
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('names').workflow]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "functionapp,workflowapp",
+              "identity": {
+                "type": "SystemAssigned, UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix'))))]": {}
+                }
+              },
+              "properties": {
+                "keyVaultReferenceIdentity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix')))]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('asp-workflow-{0}', variables('suffix')))]",
+                "httpsOnly": true,
+                "publicNetworkAccess": "[variables('networkAccess')]",
+                "siteConfig": {
+                  "minTlsVersion": "1.2",
+                  "ftpsState": "Disabled",
+                  "appSettings": "[concat(createArray(createObject('name', 'AzureWebJobsStorage', 'value', format('@Microsoft.KeyVault(SecretUri={0})', reference(resourceId('Microsoft.KeyVault/vaults/secrets', variables('names').vault, 'workflow-host-storage'), '2023-07-01').secretUriWithVersion)), createObject('name', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', 'value', format('@Microsoft.KeyVault(SecretUri={0})', reference(resourceId('Microsoft.KeyVault/vaults/secrets', variables('names').vault, 'workflow-host-storage'), '2023-07-01').secretUriWithVersion)), createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('appi-flow-{0}', variables('suffix'))), '2020-02-02').ConnectionString), createObject('name', 'FLOW_STORAGE_URL', 'value', reference(resourceId('Microsoft.Storage/storageAccounts', variables('names').data), '2023-05-01').primaryEndpoints.blob)), createArray(createObject('name', 'APP_KIND', 'value', 'workflowApp'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'dotnet'), createObject('name', 'WEBSITE_NODE_DEFAULT_VERSION', 'value', '~22'), createObject('name', 'WEBSITE_CONTENTSHARE', 'value', 'workflow-content'), createObject('name', 'FLOW_ADAPTER_URL', 'value', format('https://{0}.azurewebsites.net', variables('names').adapter)), createObject('name', 'FLOW_ADAPTER_AUDIENCE', 'value', parameters('adapterAudience')), createObject('name', 'FLOW_FOUNDRY_PROJECT_ENDPOINT', 'value', parameters('foundryConfig').endpoint), createObject('name', 'FLOW_COORDINATOR_AGENT_NAME', 'value', parameters('foundryConfig').closeout.name), createObject('name', 'FLOW_COORDINATOR_AGENT_VERSION', 'value', string(parameters('foundryConfig').closeout.version)), createObject('name', 'Workflows.validation.FlowState', 'value', if(parameters('enableBlobValidation'), 'Enabled', 'Disabled')), createObject('name', 'Workflows.coordinator.FlowState', 'value', if(and(parameters('enableCoordinatorDispatch'), not(empty(parameters('fabricDispatchPrincipalId')))), 'Enabled', 'Disabled'))))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('names').data)]",
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('names').vault, 'workflow-host-storage')]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix')))]",
+                "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', variables('names').vault), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', variables('names').vault), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix'))), variables('vaultReader')))]",
+                "[resourceId('Microsoft.Insights/components', format('appi-flow-{0}', variables('suffix')))]",
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('names').host, 'default', 'workflow-content')]",
+                "[resourceId('Microsoft.Web/serverfarms', format('asp-workflow-{0}', variables('suffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('names').adapter]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "functionapp,linux",
+              "identity": {
+                "type": "SystemAssigned, UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix'))))]": {}
+                }
+              },
+              "properties": {
+                "keyVaultReferenceIdentity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix')))]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('asp-adapter-{0}', variables('suffix')))]",
+                "httpsOnly": true,
+                "publicNetworkAccess": "[variables('networkAccess')]",
+                "siteConfig": {
+                  "linuxFxVersion": "Python|3.11",
+                  "minTlsVersion": "1.2",
+                  "ftpsState": "Disabled",
+                  "appSettings": "[concat(createArray(createObject('name', 'AzureWebJobsStorage', 'value', format('@Microsoft.KeyVault(SecretUri={0})', reference(resourceId('Microsoft.KeyVault/vaults/secrets', variables('names').vault, 'workflow-host-storage'), '2023-07-01').secretUriWithVersion)), createObject('name', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', 'value', format('@Microsoft.KeyVault(SecretUri={0})', reference(resourceId('Microsoft.KeyVault/vaults/secrets', variables('names').vault, 'workflow-host-storage'), '2023-07-01').secretUriWithVersion)), createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('appi-flow-{0}', variables('suffix'))), '2020-02-02').ConnectionString), createObject('name', 'FLOW_STORAGE_URL', 'value', reference(resourceId('Microsoft.Storage/storageAccounts', variables('names').data), '2023-05-01').primaryEndpoints.blob)), createArray(createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'python'), createObject('name', 'WEBSITE_CONTENTSHARE', 'value', 'adapter-content'), createObject('name', 'FLOW_ALLOWED_CALLER_OIDS', 'value', reference(resourceId('Microsoft.Web/sites', variables('names').workflow), '2023-12-01', 'full').identity.principalId), createObject('name', 'FLOW_PUBLISHER_CALLER_OIDS', 'value', parameters('publisherPrincipalId')), createObject('name', 'FLOW_EVENTSTREAM_NAMESPACE', 'value', parameters('eventstreamNamespace')), createObject('name', 'FLOW_EVENTSTREAM_ENTITY', 'value', parameters('eventstreamEntity')), createObject('name', 'FLOW_FOUNDRY_CONFIG_JSON', 'value', string(parameters('foundryConfig'))), createObject('name', 'FLOW_CONTRACTS_ROOT', 'value', 'contracts')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('names').host, 'default', 'adapter-content')]",
+                "[resourceId('Microsoft.Web/serverfarms', format('asp-adapter-{0}', variables('suffix')))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('names').data)]",
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('names').vault, 'workflow-host-storage')]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix')))]",
+                "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', variables('names').vault), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', variables('names').vault), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-flow-host-{0}', variables('suffix'))), variables('vaultReader')))]",
+                "[resourceId('Microsoft.Insights/components', format('appi-flow-{0}', variables('suffix')))]",
+                "[resourceId('Microsoft.Web/sites', variables('names').workflow)]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', variables('names').adapter, 'authsettingsV2')]",
+              "properties": {
+                "platform": {
+                  "enabled": true
+                },
+                "globalValidation": {
+                  "requireAuthentication": true,
+                  "unauthenticatedClientAction": "Return401"
+                },
+                "identityProviders": {
+                  "azureActiveDirectory": {
+                    "enabled": true,
+                    "registration": {
+                      "clientId": "[parameters('adapterClientId')]",
+                      "openIdIssuer": "[format('{0}{1}/v2.0', environment().authentication.loginEndpoint, tenant().tenantId)]"
+                    },
+                    "validation": {
+                      "allowedAudiences": [
+                        "[parameters('adapterAudience')]"
+                      ],
+                      "defaultAuthorizationPolicy": {
+                        "allowedPrincipals": {
+                          "identities": "[concat(createArray(reference(resourceId('Microsoft.Web/sites', variables('names').workflow), '2023-12-01', 'full').identity.principalId), if(empty(parameters('publisherPrincipalId')), createArray(), createArray(parameters('publisherPrincipalId'))))]"
+                        }
+                      }
+                    }
+                  }
+                },
+                "httpSettings": {
+                  "requireHttps": true
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('names').adapter)]",
+                "[resourceId('Microsoft.Web/sites', variables('names').workflow)]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', variables('names').workflow, 'authsettingsV2')]",
+              "properties": {
+                "platform": {
+                  "enabled": true
+                },
+                "globalValidation": {
+                  "requireAuthentication": true,
+                  "unauthenticatedClientAction": "Return401"
+                },
+                "identityProviders": {
+                  "azureActiveDirectory": {
+                    "enabled": true,
+                    "registration": {
+                      "clientId": "[parameters('adapterClientId')]",
+                      "openIdIssuer": "[format('{0}{1}/v2.0', environment().authentication.loginEndpoint, tenant().tenantId)]"
+                    },
+                    "validation": {
+                      "allowedAudiences": [
+                        "[parameters('adapterAudience')]"
+                      ],
+                      "defaultAuthorizationPolicy": {
+                        "allowedPrincipals": {
+                          "identities": [
+                            "[if(empty(parameters('fabricDispatchPrincipalId')), '00000000-0000-0000-0000-000000000000', parameters('fabricDispatchPrincipalId'))]"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "httpSettings": {
+                  "requireHttps": true
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('names').workflow)]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableBlobValidation')]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/blobServices/{1}/containers/{2}', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[0])]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[0]), resourceId('Microsoft.Web/sites', variables('names').workflow), variables('blobContributor'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('names').workflow), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('blobContributor')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[0])]",
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[0])]",
+                "[resourceId('Microsoft.Web/sites', variables('names').workflow)]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/blobServices/{1}/containers/{2}', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[2])]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[2]), resourceId('Microsoft.Web/sites', variables('names').workflow), variables('blobContributor'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('names').workflow), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('blobContributor')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[2])]",
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[2])]",
+                "[resourceId('Microsoft.Web/sites', variables('names').workflow)]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "adapterDataRoles",
+                "count": "[length(createArray('inputs', 'ledger', 'results'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/blobServices/{1}/containers/{2}', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()])]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()]), resourceId('Microsoft.Web/sites', variables('names').adapter), createArray('inputs', 'ledger', 'results')[copyIndex()])]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('names').adapter), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[if(equals(copyIndex(), 0), variables('blobReader'), variables('blobContributor'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('names').adapter)]",
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()])]",
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()])]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "operatorDataRoles",
+                "count": "[length(createArray('inputs', 'ledger', 'results'))]"
+              },
+              "condition": "[not(empty(parameters('uploadOperatorPrincipalId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/blobServices/{1}/containers/{2}', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()])]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()]), parameters('uploadOperatorPrincipalId'), createArray('inputs', 'ledger', 'results')[copyIndex()])]",
+              "properties": {
+                "principalId": "[parameters('uploadOperatorPrincipalId')]",
+                "principalType": "[parameters('uploadOperatorPrincipalType')]",
+                "roleDefinitionId": "[if(equals(copyIndex(), 2), variables('blobReader'), variables('blobContributor'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()])]",
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('names').data, 'default', createArray('inputs', 'ledger', 'results')[copyIndex()])]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "flow-project-access",
+              "subscriptionId": "[variables('projectParts')[2]]",
+              "resourceGroup": "[variables('projectParts')[4]]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "accountName": {
+                    "value": "[variables('projectParts')[8]]"
+                  },
+                  "projectName": {
+                    "value": "[variables('projectParts')[10]]"
+                  },
+                  "adapterPrincipalId": {
+                    "value": "[reference(resourceId('Microsoft.Web/sites', variables('names').adapter), '2023-12-01', 'full').identity.principalId]"
+                  },
+                  "workflowPrincipalId": {
+                    "value": "[reference(resourceId('Microsoft.Web/sites', variables('names').workflow), '2023-12-01', 'full').identity.principalId]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.39.26.7824",
+                      "templateHash": "12778290730099358580"
+                    }
+                  },
+                  "parameters": {
+                    "accountName": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "adapterPrincipalId": {
+                      "type": "string"
+                    },
+                    "workflowPrincipalId": {
+                      "type": "string"
+                    }
+                  },
+                  "variables": {
+                    "userRole": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')]"
+                  },
+                  "resources": [
+                    {
+                      "copy": {
+                        "name": "access",
+                        "count": "[length(createArray(parameters('adapterPrincipalId'), parameters('workflowPrincipalId')))]"
+                      },
+                      "type": "Microsoft.Authorization/roleAssignments",
+                      "apiVersion": "2022-04-01",
+                      "scope": "[format('Microsoft.CognitiveServices/accounts/{0}/projects/{1}', parameters('accountName'), parameters('projectName'))]",
+                      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), createArray(parameters('adapterPrincipalId'), parameters('workflowPrincipalId'))[copyIndex()], variables('userRole'))]",
+                      "properties": {
+                        "principalId": "[createArray(parameters('adapterPrincipalId'), parameters('workflowPrincipalId'))[copyIndex()]]",
+                        "principalType": "ServicePrincipal",
+                        "roleDefinitionId": "[variables('userRole')]"
+                      }
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('names').adapter)]",
+                "[resourceId('Microsoft.Web/sites', variables('names').workflow)]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageUrl": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('names').data), '2023-05-01').primaryEndpoints.blob]"
+            },
+            "workflowName": {
+              "type": "string",
+              "value": "[variables('names').workflow]"
+            },
+            "adapterName": {
+              "type": "string",
+              "value": "[variables('names').adapter]"
+            },
+            "workflowPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', variables('names').workflow), '2023-12-01', 'full').identity.principalId]"
+            },
+            "adapterPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', variables('names').adapter), '2023-12-01', 'full').identity.principalId]"
+            },
+            "publisherConfig": {
+              "type": "object",
+              "value": {
+                "serverUrl": "[format('https://{0}.azurewebsites.net', variables('names').adapter)]",
+                "audience": "[parameters('adapterAudience')]"
+              }
+            },
+            "deploymentState": {
+              "type": "string",
+              "value": "Foundation only; deploy workflow/runtime packages and verify native tools, Eventstream and Fabric separately."
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('foundryName'), parameters('projectName'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'close-out-model')]"
+      ]
     }
   ],
   "outputs": {
@@ -652,6 +1421,10 @@
     "projectResourceId": {
       "type": "string",
       "value": "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('foundryName'), parameters('projectName'))]"
+    },
+    "projectPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('foundryName'), parameters('projectName')), '2025-06-01', 'full').identity.principalId]"
     },
     "projectEndpoint": {
       "type": "string",
@@ -707,6 +1480,24 @@
     "applicationInsightsResourceId": {
       "type": "string",
       "value": "[resourceId('Microsoft.Insights/components', format('appi-{0}', variables('suffix')))]"
+    },
+    "flow": {
+      "type": "object",
+      "value": {
+        "workflowName": "[reference(resourceId('Microsoft.Resources/deployments', 'close-out-playground-flow'), '2025-04-01').outputs.workflowName.value]",
+        "adapterName": "[reference(resourceId('Microsoft.Resources/deployments', 'close-out-playground-flow'), '2025-04-01').outputs.adapterName.value]",
+        "storageUrl": "[reference(resourceId('Microsoft.Resources/deployments', 'close-out-playground-flow'), '2025-04-01').outputs.storageUrl.value]",
+        "workflowPrincipalId": "[reference(resourceId('Microsoft.Resources/deployments', 'close-out-playground-flow'), '2025-04-01').outputs.workflowPrincipalId.value]",
+        "adapterPrincipalId": "[reference(resourceId('Microsoft.Resources/deployments', 'close-out-playground-flow'), '2025-04-01').outputs.adapterPrincipalId.value]",
+        "publisherConfig": "[reference(resourceId('Microsoft.Resources/deployments', 'close-out-playground-flow'), '2025-04-01').outputs.publisherConfig.value]"
+      }
+    },
+    "publishDefinitionsCommand": {
+      "type": "string",
+      "metadata": {
+        "description": "Run after ARM succeeds. Publishes both agent definitions, native IQ and the runtime/workflow ZIPs. No inference or Fabric item deployment. Complete manual grants, documents, callback and enablement before use."
+      },
+      "value": "[format('uv run --frozen --extra agents --extra flow python -m agents.bootstrap --resource-group \"{0}\" --deployment \"{1}\" --create-fabric-connection --publish-flow', resourceGroup().name, deployment().name)]"
     }
   }
 }

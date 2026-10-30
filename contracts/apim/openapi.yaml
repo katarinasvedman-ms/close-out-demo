@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Close-out governed API - draft
-  version: 0.1.0
+  version: 0.3.0
   description: >-
     Review proposal, not a deployed API. No tenant-specific server or OAuth
     endpoint is assumed. The generated self-contained OpenAPI artifact resolves

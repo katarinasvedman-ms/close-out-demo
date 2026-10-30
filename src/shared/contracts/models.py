@@ -198,6 +198,21 @@ class EventEnvelope(BaseModel):
     data: dict[str, Any]
 
 
+class BatchCompletion(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    runId: UUID
+    batchId: UUID
+    program: str = Field(..., min_length=1)
+    manifestSha256: str = Field(..., pattern="^[a-f0-9]{64}$")
+    eventIds: list[UUID] = Field(..., min_length=2)
+    validationSource: Any = Field(
+        ...,
+        description="Agent-submitted assessments are authenticated tool inputs, not independently verified model-response receipts.",
+    )
+
+
 class CloseOutCaseChange(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -220,6 +235,18 @@ class CloseOutCaseChanged(EventEnvelope):
     eventType: Literal["CloseOutCaseChanged"] = "CloseOutCaseChanged"
     caseId: UUID | None = None
     data: CloseOutCaseChange | None = Field(None, title="CloseOutCaseChange")
+
+
+class HeadlessReadinessData(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    runId: UUID
+    transitionId: UUID
+    program: str = Field(..., min_length=1)
+    factsRevision: str = Field(..., pattern="^[a-f0-9]{64}$")
+    sourceRef: str = Field(..., min_length=1)
+    signal: ReadinessSignal
 
 
 class CustomerProject(BaseModel):
@@ -505,6 +532,31 @@ class EntityMatchCandidate(BaseModel):
     survivorId: str | None = None
 
 
+class PinnedBlob(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    url: AnyUrl
+    etag: str = Field(..., min_length=1)
+    sha256: str = Field(..., pattern="^[a-f0-9]{64}$")
+    versionId: str | None = Field(None, min_length=1)
+    mediaType: str
+
+
+class BatchEvidence(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    evidenceId: str = Field(..., min_length=1)
+    kind: str
+    metadata: dict[str, Any]
+    blob: PinnedBlob
+    text: PinnedBlob | None = Field(
+        None,
+        description="Optional pinned synthetic text counterpart. It does not imply PDF OCR or document IQ ingestion.",
+    )
+
+
 class Gap(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -603,6 +655,16 @@ class ArtifactUploaded(EventEnvelope):
     data: AcceptanceArtifact | None = None
 
 
+class EvidenceBatchCompleted(EventEnvelope):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    schemaVersion: Literal["0.2.0"] = "0.2.0"
+    eventType: Literal["EvidenceBatchCompleted"] = "EvidenceBatchCompleted"
+    caseId: UUID | None = None
+    data: BatchCompletion | None = None
+
+
 class MilestoneChanged(EventEnvelope):
     model_config = ConfigDict(
         extra="ignore",
@@ -659,6 +721,16 @@ class WorkOrderChanged(EventEnvelope):
     data: WorkOrder | None = None
 
 
+class HeadlessReadiness(EventEnvelope):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    schemaVersion: Literal["0.2.0"] = "0.2.0"
+    eventType: Literal["HeadlessReadiness"] = "HeadlessReadiness"
+    caseId: UUID | None = None
+    data: HeadlessReadinessData | None = None
+
+
 class SharedObject(
     RootModel[
         CustomerProject
@@ -697,6 +769,24 @@ class SharedObject(
         description="Draft logical objects, not physical Dataverse column names. Lifecycle nullability and auxiliary structures require owner review.",
         title="SharedObject",
     )
+
+
+class EvidenceBatch(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    schemaVersion: Literal["0.2.0"]
+    runId: UUID
+    batchId: UUID
+    caseId: UUID
+    siteId: str = Field(..., min_length=1)
+    program: str = Field(..., min_length=1)
+    registeredAt: AwareDatetime
+    facts: dict[str, Any] = Field(
+        ...,
+        description="Explicit synthetic baseline used for validation context, never a substitute for the coordinator's native Fabric tool. Seeded validations are not uploaded-inference results.",
+    )
+    members: list[BatchEvidence] = Field(..., max_length=100, min_length=1)
 
 
 class AgentOutput(RootModel[GapAnalysis | PackageManifest]):
@@ -745,6 +835,9 @@ class ContractTypes(BaseModel):
     CodeLists_1: CodeLists | None = Field(None, alias="CodeLists")
     ArtifactUploaded_1: ArtifactUploaded | None = Field(None, alias="ArtifactUploaded")
     EventEnvelope_1: EventEnvelope | None = Field(None, alias="EventEnvelope")
+    EvidenceBatchCompleted_1: EvidenceBatchCompleted | None = Field(
+        None, alias="EvidenceBatchCompleted"
+    )
     MilestoneChanged_1: MilestoneChanged | None = Field(None, alias="MilestoneChanged")
     PhotoUploaded_1: PhotoUploaded | None = Field(None, alias="PhotoUploaded")
     TicketChanged_1: TicketChanged | None = Field(None, alias="TicketChanged")
@@ -756,4 +849,6 @@ class ContractTypes(BaseModel):
     )
     WorkOrderChanged_1: WorkOrderChanged | None = Field(None, alias="WorkOrderChanged")
     CloseOutCaseChanged_1: CloseOutCaseChanged | None = Field(None, alias="CloseOutCaseChanged")
+    HeadlessReadiness_1: HeadlessReadiness | None = Field(None, alias="HeadlessReadiness")
     SharedObject_1: SharedObject | None = Field(None, alias="SharedObject")
+    EvidenceBatch_1: EvidenceBatch | None = Field(None, alias="EvidenceBatch")

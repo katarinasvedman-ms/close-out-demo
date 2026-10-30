@@ -1,0 +1,210 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "Fabric_readiness_transition": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "schema": {
+            "type": "object",
+            "required": ["schemaVersion", "eventType", "eventId", "caseId", "siteId", "occurredAt", "producer", "data"],
+            "properties": {
+              "schemaVersion": { "type": "string", "enum": ["0.2.0"] },
+              "eventType": { "type": "string", "enum": ["HeadlessReadiness"] },
+              "eventId": { "type": "string", "format": "uuid" },
+              "caseId": { "type": "string", "format": "uuid" },
+              "siteId": { "type": "string", "minLength": 1 },
+              "occurredAt": { "type": "string", "format": "date-time" },
+              "producer": { "type": "string", "minLength": 1 },
+              "data": {
+                "type": "object",
+                "required": ["runId", "transitionId", "program", "factsRevision", "sourceRef", "signal"],
+                "properties": {
+                  "runId": { "type": "string", "format": "uuid" },
+                  "transitionId": { "type": "string", "format": "uuid" },
+                  "program": { "type": "string", "minLength": 1 },
+                  "factsRevision": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                  "sourceRef": { "type": "string", "minLength": 1 },
+                  "signal": {
+                    "type": "object",
+                    "required": ["caseId", "siteId", "readiness", "readinessMissing", "evaluatedAt"],
+                    "properties": {
+                      "caseId": { "type": "string", "format": "uuid" },
+                      "siteId": { "type": "string", "minLength": 1 },
+                      "readiness": { "type": "string", "enum": ["Blocked", "Ready"] },
+                      "readinessMissing": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+                      "evaluatedAt": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions": {
+      "Acknowledge_durable_workflow_run": {
+        "type": "Response",
+        "kind": "Http",
+        "inputs": {
+          "statusCode": 202,
+          "body": {
+            "status": "AcceptedForProcessing",
+            "workflowRunId": "@workflow().run.name"
+          }
+        },
+        "runAfter": {}
+      },
+      "Start_agent_response": {
+        "type": "Http",
+        "inputs": {
+          "uri": "@concat(appsetting('FLOW_FOUNDRY_PROJECT_ENDPOINT'), '/openai/v1/responses')",
+          "method": "POST",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "agent_reference": {
+              "type": "agent_reference",
+              "name": "@appsetting('FLOW_COORDINATOR_AGENT_NAME')",
+              "version": "@appsetting('FLOW_COORDINATOR_AGENT_VERSION')"
+            },
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "@concat('Draft the gap analysis for site ', triggerBody()?['siteId'], ', case ', triggerBody()?['caseId'], '. Use program ', triggerBody()?['data']?['program'], ', exact test runId ', triggerBody()?['data']?['runId'], ' and factsRevision ', triggerBody()?['data']?['factsRevision'], '. Obtain both tools'' sources before answering.')"
+                  }
+                ]
+              }
+            ],
+            "background": true,
+            "store": true,
+            "max_output_tokens": 4000
+          },
+          "authentication": {
+            "type": "ManagedServiceIdentity",
+            "audience": "https://ai.azure.com"
+          },
+          "retryPolicy": { "type": "none" }
+        },
+        "runtimeConfiguration": {
+          "secureData": { "properties": ["inputs", "outputs"] }
+        },
+        "runAfter": { "Acknowledge_durable_workflow_run": ["Succeeded"] }
+      },
+      "Initialize_agent_response": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "Agent_response",
+              "type": "object",
+              "value": "@body('Start_agent_response')"
+            }
+          ]
+        },
+        "runAfter": { "Start_agent_response": ["Succeeded"] }
+      },
+      "Wait_for_agent_completion": {
+        "type": "Until",
+        "expression": "@contains(createArray('completed', 'failed', 'cancelled', 'incomplete'), variables('Agent_response')?['status'])",
+        "limit": { "count": 180, "timeout": "PT30M" },
+        "operationOptions": "FailWhenLimitsReached",
+        "actions": {
+          "Wait_before_polling": {
+            "type": "Wait",
+            "inputs": { "interval": { "count": 10, "unit": "Second" } },
+            "runAfter": {}
+          },
+          "Get_agent_response": {
+            "type": "Http",
+            "inputs": {
+              "uri": "@concat(appsetting('FLOW_FOUNDRY_PROJECT_ENDPOINT'), '/openai/v1/responses/', uriComponent(body('Start_agent_response')?['id']))",
+              "method": "GET",
+              "authentication": {
+                "type": "ManagedServiceIdentity",
+                "audience": "https://ai.azure.com"
+              },
+              "retryPolicy": {
+                "type": "exponential", "count": 4,
+                "interval": "PT10S", "minimumInterval": "PT10S", "maximumInterval": "PT30S"
+              }
+            },
+            "runtimeConfiguration": {
+              "secureData": { "properties": ["inputs", "outputs"] }
+            },
+            "runAfter": { "Wait_before_polling": ["Succeeded"] }
+          },
+          "Update_agent_response": {
+            "type": "SetVariable",
+            "inputs": {
+              "name": "Agent_response",
+              "value": "@body('Get_agent_response')"
+            },
+            "runAfter": { "Get_agent_response": ["Succeeded"] }
+          }
+        },
+        "runAfter": { "Initialize_agent_response": ["Succeeded"] }
+      },
+      "Save_completed_agent_response": {
+        "type": "If",
+        "expression": {
+          "equals": ["@variables('Agent_response')?['status']", "completed"]
+        },
+        "actions": {
+          "Save_response_to_Blob": {
+            "type": "Http",
+            "inputs": {
+              "uri": "@concat(appsetting('FLOW_STORAGE_URL'), 'results/coordinator/', uriComponent(triggerBody()?['data']?['runId']), '/', uriComponent(triggerBody()?['caseId']), '/', uriComponent(triggerBody()?['data']?['signal']?['readiness']), '/', uriComponent(triggerBody()?['data']?['transitionId']), '/', workflow().run.name, '.json')",
+              "method": "PUT",
+              "headers": {
+                "Content-Type": "application/json",
+                "x-ms-blob-type": "BlockBlob",
+                "x-ms-version": "2023-11-03",
+                "x-ms-meta-caseid": "@triggerBody()?['caseId']",
+                "x-ms-meta-runid": "@triggerBody()?['data']?['runId']",
+                "x-ms-meta-workflowrunid": "@workflow().run.name"
+              },
+              "body": "@variables('Agent_response')",
+              "authentication": {
+                "type": "ManagedServiceIdentity",
+                "audience": "https://storage.azure.com/"
+              },
+              "retryPolicy": {
+                "type": "exponential", "count": 4,
+                "interval": "PT10S", "minimumInterval": "PT10S", "maximumInterval": "PT1M"
+              }
+            },
+            "runtimeConfiguration": {
+              "secureData": { "properties": ["inputs", "outputs"] }
+            },
+            "runAfter": {}
+          }
+        },
+        "else": {
+          "actions": {
+            "Agent_did_not_complete": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "AgentDidNotComplete",
+                  "message": "@concat('Foundry response ', body('Start_agent_response')?['id'], ' ended with status ', variables('Agent_response')?['status'], '. No completed response Blob was written.')"
+                }
+              },
+              "runAfter": {}
+            }
+          }
+        },
+        "runAfter": { "Wait_for_agent_completion": ["Succeeded"] }
+      }
+    },
+    "outputs": {}
+  },
+  "kind": "Stateful"
+}

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from agents.definitions import FoundrySettings, KnowledgeSettings
+from agents.definitions import FabricSettings, FoundrySettings, KnowledgeSettings, PublisherSettings
 from agents.foundry import invoke, register
 from agents.sources import Sources, mcp_facts
 from shared.local_demo import write_json
@@ -20,10 +20,26 @@ async def sources(args, site: str, scenario: str, overlay: Path | None = None) -
 
 async def run(args) -> None:
     settings = FoundrySettings.model_validate_json(args.config.read_text(encoding="utf-8"))
+    if settings.fabric:
+        if args.command != "gaps" or args.validation_results or not args.program:
+            raise ValueError(
+                "Native Fabric fixtures support gaps --program only; no local overlays or smoke"
+            )
+        if args.site not in settings.knowledge.sites:
+            raise PermissionError("Site is not configured for the shared synthetic knowledge demo")
+        from agents.fabric import read_facts
+
+        facts = await asyncio.to_thread(
+            read_facts, settings.fabric, args.site, args.program, args.scenario, args.contracts
+        )
+        inputs = Sources(facts, args.assets, args.contracts)
+    else:
+        inputs = None
     if args.command == "smoke":
         await smoke(args, settings)
         return
-    inputs = await sources(args, args.site, args.scenario, args.validation_results)
+    if inputs is None:
+        inputs = await sources(args, args.site, args.scenario, args.validation_results)
     kind = "validation" if args.command == "validate" else "closeout"
     receipt = await invoke(kind, settings, inputs, getattr(args, "evidence", None))
     target = args.output / f"{args.command}-{receipt['correlationId']}.json"
@@ -105,6 +121,8 @@ def main() -> None:
     deploy.add_argument("--closeout-name", default="close-out-coordinator")
     deploy.add_argument("--config", type=Path, default=Path(".local") / "foundry" / "config.json")
     deploy.add_argument("--knowledge-config", type=Path)
+    deploy.add_argument("--fabric-config", type=Path)
+    deploy.add_argument("--publisher-config", type=Path)
     for command in ("validate", "gaps", "smoke"):
         sub = commands.add_parser(command)
         sub.add_argument("--config", type=Path, default=Path(".local") / "foundry" / "config.json")
@@ -115,6 +133,7 @@ def main() -> None:
         if command != "smoke":
             sub.add_argument("--site", required=True)
             sub.add_argument("--scenario", default="initial-blocked")
+            sub.add_argument("--program")
             sub.add_argument("--validation-results", type=Path)
         if command == "validate":
             sub.add_argument("--evidence", action="append", required=True)
@@ -133,6 +152,18 @@ def main() -> None:
                     args.knowledge_config.read_text(encoding="utf-8")
                 )
                 if args.knowledge_config
+                else None
+            ),
+            (
+                FabricSettings.model_validate_json(args.fabric_config.read_text(encoding="utf-8"))
+                if args.fabric_config
+                else None
+            ),
+            (
+                PublisherSettings.model_validate_json(
+                    args.publisher_config.read_text(encoding="utf-8")
+                )
+                if args.publisher_config
                 else None
             ),
         )

@@ -1,0 +1,54 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "Input_blob_added_or_modified": {
+        "type": "ServiceProvider",
+        "inputs": {
+          "parameters": { "path": "inputs" },
+          "serviceProviderConfiguration": {
+            "connectionName": "evidenceBlob",
+            "operationId": "whenABlobIsAddedOrModified",
+            "serviceProviderId": "/serviceProviders/AzureBlob"
+          }
+        }
+      }
+    },
+    "actions": {
+      "Only_completed_batch_markers": {
+        "type": "If",
+        "expression": "@endsWith(triggerBody()?['name'], '/_batch.ready')",
+        "actions": {
+          "Validate_batch": {
+            "type": "Http",
+            "inputs": {
+              "uri": "@concat(appsetting('FLOW_ADAPTER_URL'), '/api/validation-batch')",
+              "method": "POST",
+              "headers": { "Content-Type": "application/json" },
+              "body": { "blobPath": "@triggerBody()?['name']" },
+              "authentication": {
+                "type": "ManagedServiceIdentity",
+                "audience": "@appsetting('FLOW_ADAPTER_AUDIENCE')"
+              },
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 4,
+                "interval": "PT30S",
+                "minimumInterval": "PT30S",
+                "maximumInterval": "PT2M"
+              }
+            },
+            "runtimeConfiguration": {
+              "secureData": { "properties": ["inputs", "outputs"] }
+            }
+          }
+        },
+        "else": { "actions": {} },
+        "runAfter": {}
+      }
+    },
+    "outputs": {}
+  },
+  "kind": "Stateful"
+}

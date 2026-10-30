@@ -53,5 +53,12 @@
   { "schema": "agents/outputs.schema.json#/$defs/ReworkProposal", "example": "examples/agent-outputs.json#/ReworkProposal" },
   { "schema": "agents/outputs.schema.json#/$defs/GapAnalysis", "example": "examples/agent-outputs.json#/GapAnalysis" },
   { "schema": "agents/outputs.schema.json#/$defs/PackageFile", "example": "examples/agent-outputs.json#/PackageFile" },
-  { "schema": "agents/outputs.schema.json#/$defs/PackageManifest", "example": "examples/agent-outputs.json#/PackageManifest" }
+  { "schema": "agents/outputs.schema.json#/$defs/PackageManifest", "example": "examples/agent-outputs.json#/PackageManifest" },
+  { "schema": "uploads/evidence-batch.schema.json", "example": "examples/headless.json#/batch" },
+  { "schema": "uploads/evidence-batch.schema.json#/$defs/BatchEvidence", "example": "examples/headless.json#/batch/members/0" },
+  { "schema": "uploads/evidence-batch.schema.json#/$defs/PinnedBlob", "example": "examples/headless.json#/batch/members/0/blob" },
+  { "schema": "messages/headless-readiness.schema.json", "example": "examples/headless.json#/callback" },
+  { "schema": "messages/headless-readiness.schema.json#/$defs/HeadlessReadinessData", "example": "examples/headless.json#/callback/data" },
+  { "schema": "events/evidence-batch-completed.schema.json", "example": "examples/headless.json#/completion" },
+  { "schema": "events/evidence-batch-completed.schema.json#/$defs/BatchCompletion", "example": "examples/headless.json#/completion/data" }
 ]

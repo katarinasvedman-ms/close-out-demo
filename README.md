@@ -2,20 +2,88 @@
 
 Start with `docs\close-out-demo-definition-en.md` and `docs\IMPLEMENTATION-NOTES.md`.
 
-The implementation provides **real Foundry validation and close-out prompt agents**, Blob-backed Foundry IQ, a runnable offline seed/stub demonstration, a minimal React console, and provisional cross-track contracts with generated types. Evidence is synthetic; document retrieval is live IQ when bound, and facts come from a scoped Data Agent MCP stub. Upload APIs, business actions, package compilation, a complete Azure foundation and live Dataverse/Fabric integrations are not implemented.
+The implementation provides **real Foundry validation and close-out prompt agents**, Blob-backed Foundry IQ, a runnable offline seed/stub demonstration, a minimal React console, and provisional cross-track contracts with generated types. Evidence is synthetic; document retrieval is live IQ when bound. Facts use either the scoped MCP stub or an explicit native Fabric IQ binding to existing external test fixtures. Fabric is not deployed by this repository. Upload APIs, business actions, package compilation, a complete Azure foundation and production Dataverse/Fabric flows are not implemented.
 
-**Fabric contract review:** start with [`contracts/REVIEW-DECISIONS.md`](contracts/REVIEW-DECISIONS.md), then the referenced schemas and examples. This is a provisional v0.1.0 review baseline, not an approved release or a complete end-to-end integration.
+**Fabric contract review:** start with [`contracts/REVIEW-DECISIONS.md`](contracts/REVIEW-DECISIONS.md), then the referenced schemas and examples. The provisional v0.1.0 shared baseline now has draft v0.2.0 additive headless-test transports; neither is an approved release or a complete end-to-end integration.
 
-## Deploy a fresh headless demo
+## Deploy the playground flow
+
+The portal template includes the Azure foundation for the
+[playground-to-Blob flow](docs/HEADLESS-FLOW.md#selected-playground-to-blob-flow).
+**ARM, publication and manual Fabric setup are separate required phases.**
+The public button loads `main`; use the matching published source revision
+for the publication command. It cannot deploy uncommitted code.
+Strict all-managed-identity operation is not currently supported by the selected
+Fabric callback/projector and Azure Files hosting configuration. Review the
+[manual checklist and identity limitations](docs/MANUAL_STEPS.md#playground-flow-deployment-checklist)
+before provisioning; no credential exception is automatically approved.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fkatarinasvedman-ms%2Fclose-out-demo%2Fmain%2Finfra%2Ffresh%2Fazuredeploy.json)
 
-Select your subscription/resource group and enter a Foundry name; no existing
-Foundry account/project is needed. The button provisions the current demo's
-infrastructure in that group. [Complete setup](docs/DEPLOY-TO-AZURE.md) then uploads
-synthetic documents, configures native Blob IQ, registers prompt agents and verifies
-both cases using a local client. No hosted agent, application container or registry
-is part of this solution. This is not the full planned Azure/Fabric/Power Platform solution.
+Select your subscription/resource group and enter a Foundry name, the prepared
+Entra API registration client ID, exact Fabric dispatch principal object ID,
+and existing Eventstream namespace/entity. No existing Foundry project is needed;
+Fabric remains external. The template creates Foundry/IQ resources, the publisher
+Function and direct coordinator Logic App, their identities and Azure permissions.
+WS1/EP1 hosting incurs charges. Copy `publishDefinitionsCommand` from deployment
+**Outputs**, or run from the same source revision:
+
+```powershell
+uv sync --frozen --extra agents --extra flow --python 3.11
+uv run --frozen --extra agents --extra flow python -m agents.bootstrap --resource-group "<resource-group>" --deployment "<deployment-name>" --create-fabric-connection --publish-flow
+```
+
+Publication requires Azure CLI, uv/Python 3.11 and PowerShell 7 (`pwsh`).
+It registers the validation agent with its target-specific
+`trigger_fabric_eventstream` OpenAPI tool and publication instructions, retains
+native Fabric/document IQ on the coordinator, pins the actual returned versions
+and publishes the runtime/workflow ZIPs. Both workflows remain **Disabled** until
+the checklist's grants, documents, external bindings and coordinator enablement
+are complete. The separate Blob-validation workflow stays disabled for this path.
+
+The command defaults to **native Fabric IQ** and prompts in an interactive
+terminal for the existing external Fabric target. For automation, supply
+`--fabric-config "<fabric-settings.json>"`; see the six-field example in
+[deployment details](docs/DEPLOY-TO-AZURE.md#external-fabric-configuration).
+It validates a **Project Managed Identity** Fabric connection in the selected
+Foundry project, using audience `https://api.fabric.microsoft.com`. The
+command explicitly authorizes creating an absent connection; omit
+`--create-fabric-connection` to require an existing connection instead.
+It never overwrites a mismatching existing connection or deploys Fabric.
+Use `--facts-mode stub` explicitly, without the connection-creation flag, if you
+want the local synthetic-facts client instead. Native configuration never
+silently falls back to it.
+
+**No document upload, generated assets or inference is required for publication.**
+Document loading, indexing checks and local-client smoke tests are
+optional: rerun with `--seed-and-verify` when Storage access is available.
+[Deployment details](docs/DEPLOY-TO-AZURE.md) explain the two phases and receipts.
+The button alone still does not publish agents or knowledge-base definitions.
+No hosted agent, application container or registry is part of this solution.
+This is not the full planned Azure/Fabric/Power Platform solution.
+The existing development [Blob/Activator headless flow](docs/HEADLESS-FLOW.md) reuses the existing
+Fabric IQ tool, with Logic Apps invoking Foundry using managed identity.
+Pinned upload contracts, Blob adapters/outbox, workflow/Function definitions and
+optional flow Bicep are deployed to the selected test target. An actual Blob
+upload triggered Logic Apps and managed-identity Foundry validation. After the
+approved sender Contributor grant, the cached outbox published all seven events
+and their ingestion was verified without repeating inference. Validation v4
+rejects both original photos and accepts replacements using actual Blob bytes.
+A Fabric-owned scheduled notebook now projects events into immutable readiness
+snapshots; original gaps, open rework, Ready fallback and NotReady precedence
+were verified. After Fabric rejected WorkspaceIdentity, the user authorized a
+dedicated app-only callback credential, now protected in Key Vault and Fabric.
+An actual authenticated Fabric Web activity reached the Logic Apps Request
+trigger; anonymous access is denied. The Data Agent additively exposes live
+snapshots. After changing its Foundry connection to Project Managed Identity
+and granting the project identity Read/database Viewer, the native Fabric call
+succeeded. The old coordinator Function subsequently rejected provenance.
+The replacement coordinator workflow calls Foundry directly, waits for its
+background response and saves unmodified completed response JSON to Blob.
+Its deployed definition and health are verified, but a live invocation of the
+replacement and a fresh unattended proof have not been performed.
+The template includes that Azure hosting foundation; it adds no
+Azure Event Hubs service. Fresh-target runtime acceptance remains unverified.
 **The button requires the template and code to be published to `main`; local
 unpublished changes are not deployable through the link.**
 
@@ -37,7 +105,7 @@ npm ci
 ```powershell
 uv run --frozen --extra dev ruff check .
 uv run --frozen --extra dev ruff format --check .
-uv run --frozen --extra dev pytest -m "not integration"
+uv run --frozen --extra dev --extra agents --extra flow pytest -m "not integration"
 uv run --frozen --extra dev python -m shared.contract_validation
 npm run contracts:check
 npm run lint
@@ -66,9 +134,9 @@ The supplied project contains two active, service-managed prompt agents:
 
 Both use `close-out-gpt-4o`: GPT-4o `2024-11-20`, regional **Standard**, capacity 30, in **Sweden Central**, with `Microsoft.DefaultV2` filtering and automatic model upgrades disabled. No global/data-zone deployment was created. [Foundry IQ](docs/FOUNDRY-IQ.md) uses one shared knowledge base and one native **Azure Blob knowledge source**, with France Central Search managing ingestion from private Sweden Central Blob Storage. **Low retrieval reasoning** reuses the existing regional model through managed identity, with site/version-aware retrieval instructions and extractive output. Both sites use coordinator version **9** and the same managed-identity MCP connection; validation remains version **1**. This synthetic operator demo does not enforce per-user document ACLs.
 
-The stored definitions and response schemas are built from `src\agents\definitions.py` and versioned prompt files. `agent-framework-foundry` connects to pinned Foundry prompt-agent versions. The local Python client supplies the coordinator's synthetic-facts function implementation; only its declaration lives in the prompt-agent definition. Use the CLI to exercise that stub. Native IQ document retrieval runs in Foundry, but the coordinator playground cannot execute a local function declaration. A real authenticated Fabric Data Agent MCP binding is still required for code-free structured-fact retrieval; no hosted wrapper is included as a substitute.
+The stored definitions and response schemas are built from `src\agents\definitions.py` and versioned prompt files. `agent-framework-foundry` connects to pinned Foundry prompt-agent versions. The default local configuration retains coordinator version **9** with a client-executed facts stub. The optional native Fabric test binding replaces that function with the authenticated Fabric IQ tool while preserving document IQ; no hosted wrapper is used. See [external Fabric testing](docs/FOUNDRY-IQ.md#existing-fabric-for-local-verification) for registration, explicit site/program/scenario prompts and the three verification commands. Native versions can retrieve both sources without local function execution; deterministic result verification still runs in the CLI.
 
-For local use, an authenticated identity with project/model access is required. Registration uses the existing Azure CLI login; invocation uses `DefaultAzureCredential`. These CLI commands do not initiate login or assign roles. Install the optional, locked SDK dependencies:
+For local use, an authenticated identity with project/model access is required. Registration uses the existing Azure CLI login; stub-mode invocation uses `DefaultAzureCredential`. Native Fabric invocation and its independent KQL verifier use the same Azure CLI user. These CLI commands do not initiate login or assign roles. Install the optional, locked SDK dependencies:
 
 ```powershell
 uv sync --frozen --extra dev --extra agents --python 3.11

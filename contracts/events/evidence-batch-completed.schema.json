@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:evidence-batch-completed",
+  "title": "EvidenceBatchCompleted",
+  "description": "Synthetic test ingestion barrier. Fabric must observe every listed eventId with matching run/batch/case/site identity before projecting this batch. Arrival of this marker alone is not readiness.",
+  "allOf": [{ "$ref": "urn:close-out-demo:contracts:event-envelope" }],
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": "0.2.0" },
+    "eventType": { "const": "EvidenceBatchCompleted" },
+    "caseId": { "type": "string", "format": "uuid" },
+    "data": { "$ref": "#/$defs/BatchCompletion" }
+  },
+  "$defs": {
+    "BatchCompletion": {
+      "title": "BatchCompletion",
+      "type": "object",
+      "required": ["runId", "batchId", "program", "manifestSha256", "eventIds", "validationSource"],
+      "properties": {
+        "runId": { "type": "string", "format": "uuid" },
+        "batchId": { "type": "string", "format": "uuid" },
+        "program": { "type": "string", "minLength": 1 },
+        "manifestSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "eventIds": {
+          "type": "array", "minItems": 2, "uniqueItems": true,
+          "items": { "type": "string", "format": "uuid" }
+        },
+        "validationSource": {
+          "description": "Agent-submitted assessments are authenticated tool inputs, not independently verified model-response receipts.",
+          "enum": ["live-foundry-inference", "agent-submitted-assessment"]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

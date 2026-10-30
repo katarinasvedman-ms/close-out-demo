@@ -1,0 +1,15 @@
+{
+  "serviceProviderConnections": {
+    "evidenceBlob": {
+      "displayName": "Dedicated synthetic input container",
+      "parameterValues": {
+        "blobStorageEndpoint": "@appsetting('FLOW_STORAGE_URL')",
+        "authProvider": { "Type": "ManagedServiceIdentity" }
+      },
+      "serviceProvider": {
+        "id": "/serviceProviders/AzureBlob"
+      }
+    }
+  },
+  "managedApiConnections": {}
+}

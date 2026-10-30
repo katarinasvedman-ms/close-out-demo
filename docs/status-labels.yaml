@@ -3,7 +3,12 @@ components:
     availability: Custom
     mode: implemented-not-fresh-cloud-verified
     implementation: infra/fresh
-    note: Resource-group Deploy to Azure ARM template and agents.bootstrap completion command; new Foundry project, native IQ and prompt agents only, with local-client verification. No hosted agent, container registry or runtime deployment. Requires publication, target quota/policy/permissions and a fresh-target acceptance run. No automatic Storage policy exception.
+    note: Template includes flow hosts and MI grants; output bootstrap command registers target-bound agents/OpenAPI and publishes locked ZIPs without inference. Actual versions replace pending-publication settings; both workflows remain Disabled until the manual checklist is completed. Public button loads main; bootstrap must use the same published revision. Native Fabric grants/bindings are external. Fresh-target deployment remains unverified. No hosted agent, Fabric provisioning, automatic credential fallback or Storage policy exception.
+  headless-blob-activator-flow:
+    availability: Custom
+    mode: direct-coordinator-deployed-live-response-capture-unverified
+    implementation: docs/HEADLESS-FLOW.md
+    note: Playground validation publication, Fabric projection and authenticated dispatch verified. Project-MI native Fabric execution now succeeds; old Function rejected retrieval provenance afterward. Coordinator Logic App now directly invokes Foundry, polls a background response for up to 30 minutes and saves completed raw JSON to results Blob, without that Function or KQL/citation validation. Deployed definitions read back Healthy; no live run of the replacement workflow is claimed. Existing validation/publisher retained. Fabric Web callback still uses an approved service-principal credential because WorkspaceIdentity is unsupported; all-MI Deploy-button delivery remains gated. Two-minute Fabric projector schedule expires 2026-10-29T18:42:39Z.
   foundry-model:
     availability: GA
     mode: live-regional
@@ -14,11 +19,21 @@ components:
     mode: live
     implementation: agents.foundry
     note: Versioned Foundry prompt agent with real PNG/PDF inference; synthetic fixtures, no Content Understanding or Dataverse writes.
+  validation-assessment-publisher:
+    availability: Custom
+    mode: deployed-manual-playground-publication-verified
+    implementation: agents.flow_publish
+    note: Publish-only Function and separate Foundry project MI allowlist deployed; user attached and successfully invoked its OpenAPI tool from the validation playground. Existing Fabric ingested its events and projected Blocked readiness. Source now includes optional target-bound native MI OpenAPI, generated schema and publication prompt, automatically registered by updated fresh bootstrap. Uses pinned registered photo context and explicit submitted-assessment provenance, never recursive inference or independently attested model output. Fresh-target acceptance and manual Fabric grants remain outstanding.
   closeout-agent:
     availability: Custom
-    mode: live-iq-with-stub-facts
+    mode: live-iq-with-optional-native-fabric-test
     implementation: agents.foundry
-    note: Prompt version 9 uses one shared knowledge base and exact native MCP connection for both sites. Agent Framework executes scoped stub facts. Cited drafts only, no approvals/actions/packages.
+    note: Default prompt version 9 retains scoped stub facts. Native test version 12 replaces local functions with delegated Fabric IQ while preserving the shared document IQ connection. Three-case native retrieval, gap/citation validation and rework behavior verified. Cited drafts only, no approvals/actions/packages.
+  external-fabric-test:
+    availability: Preview
+    mode: live-synthetic-fixtures-external
+    implementation: agents.fabric
+    note: Existing Fabric workspace/Data Agent is outside deployment. Seventy scoped scenario/site fixtures with independently computed KQL readiness; seed validation outcomes, not fresh inference. Native UserEntraToken retrieval and separate KQL snapshot verification proved blocked, Ready and open-rework cases. Operator permissions only; denied-user isolation and production events/Activator/Dataverse are not verified.
   foundry-iq:
     availability: Preview
     mode: live-synthetic-documents

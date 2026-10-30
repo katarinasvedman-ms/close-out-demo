@@ -22,6 +22,10 @@ agents = [
     "azure-identity==1.27.0",
     "azure-storage-blob>=12.24,<13",
 ]
+flow = [
+    "azure-functions>=1.21,<2",
+    "azure-eventhub>=5.12,<6",
+]
 dev = [
     "datamodel-code-generator==0.35.0",
     "openapi-spec-validator==0.7.2",
@@ -34,7 +38,7 @@ where = ["src"]
 include = ["shared*", "agents*"]
 
 [tool.setuptools.package-data]
-agents = ["prompts/*.txt"]
+agents = ["prompts/*.txt", "*.kql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

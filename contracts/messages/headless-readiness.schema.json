@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:close-out-demo:contracts:headless-readiness",
+  "title": "HeadlessReadiness",
+  "description": "External Fabric test callback, not a Dataverse change. transitionId identifies one actual BECOMES occurrence; retries preserve it. runId scopes an explicit test reset. Blocked-to-Blocked is not a new transition.",
+  "allOf": [{ "$ref": "urn:close-out-demo:contracts:event-envelope" }],
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": "0.2.0" },
+    "eventType": { "const": "HeadlessReadiness" },
+    "caseId": { "type": "string", "format": "uuid" },
+    "data": { "$ref": "#/$defs/HeadlessReadinessData" }
+  },
+  "$defs": {
+    "HeadlessReadinessData": {
+      "title": "HeadlessReadinessData",
+      "type": "object",
+      "required": ["runId", "transitionId", "program", "factsRevision", "sourceRef", "signal"],
+      "properties": {
+        "runId": { "type": "string", "format": "uuid" },
+        "transitionId": { "type": "string", "format": "uuid" },
+        "program": { "type": "string", "minLength": 1 },
+        "factsRevision": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "sourceRef": { "type": "string", "minLength": 1 },
+        "signal": { "$ref": "urn:close-out-demo:contracts:readiness-signal" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

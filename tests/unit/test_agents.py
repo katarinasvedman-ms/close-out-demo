@@ -13,8 +13,11 @@ from agents.definitions import (
     FoundrySettings,
     GapDraft,
     KnowledgeSettings,
+    PublisherSettings,
     definition,
+    definition_hash,
 )
+from agents.foundry import definition_matches, final_response_text
 from agents.knowledge import retrieval_receipts, validate_document_citations
 from agents.knowledge_setup import indexed_documents_match, native_definitions
 from agents.sources import Sources, mcp_facts
@@ -26,6 +29,64 @@ from shared.seed_files import asset_path, document_text
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACTS = ROOT / "contracts"
+
+
+def test_validation_publication_is_native_target_bound_and_does_not_change_coordinator():
+    publisher = PublisherSettings(
+        serverUrl="https://target-function.azurewebsites.net/", audience="api://target-api"
+    )
+    plain = definition("validation", "test-model")
+    body = definition("validation", "test-model", publisher=publisher)
+    assert plain["tools"] == []
+    assert "Publication through trigger_fabric_eventstream" not in plain["instructions"]
+    tool = body["tools"][0]["openapi"]
+    assert tool["name"] == "trigger_fabric_eventstream"
+    assert tool["auth"] == {
+        "type": "managed_identity",
+        "security_scheme": {"audience": publisher.audience},
+    }
+    assert tool["spec"]["servers"] == [{"url": publisher.serverUrl}]
+    assert set(tool["spec"]["paths"]) == {"/api/publish-validation-result"}
+    assert "Copy sourceRunId, sourceBatchId and publicationId exactly" in body["instructions"]
+    assert "does not prove Fabric ingestion" in body["instructions"]
+    assert definition("closeout", "test-model", publisher=publisher) == definition(
+        "closeout", "test-model"
+    )
+    changed = publisher.model_copy(update={"audience": "api://another-api"})
+    assert definition_hash(body) != definition_hash(
+        definition("validation", "test-model", publisher=changed)
+    )
+    models = pytest.importorskip("azure.ai.projects.models")
+    assert models.PromptAgentDefinition(body).as_dict() == body
+    actual = copy.deepcopy(body)
+    actual["id"] = "server-generated"
+    assert definition_matches(body, actual)
+    actual["tools"][0]["openapi"]["auth"] = {"type": "anonymous"}
+    assert not definition_matches(body, actual)
+
+
+def test_structured_response_uses_final_assistant_not_intermediate_drafts_or_tool_text():
+    response = SimpleNamespace(
+        messages=[
+            SimpleNamespace(role="assistant", text='{"gaps":[],"proposedRework":null}'),
+            SimpleNamespace(role="tool", text="retrieved evidence"),
+            SimpleNamespace(role="assistant", text='{"gaps":[{"conditionId":"CHK-A-AZ-B"}]}'),
+            SimpleNamespace(role="tool", text="not the final answer"),
+            SimpleNamespace(role="assistant", text=""),
+        ]
+    )
+    assert json.loads(final_response_text(response))["gaps"][0]["conditionId"] == "CHK-A-AZ-B"
+    response.messages = [SimpleNamespace(role="tool", text="no assistant answer")]
+    with pytest.raises(ValueError, match="final assistant"):
+        final_response_text(response)
+
+
+def test_definition_readback_accepts_native_tool_normalization_but_not_extra_tools():
+    expected = {"type": "mcp", "allowed_tools": ["knowledge_base_retrieve"]}
+    actual = {"type": "mcp", "allowed_tools": {"tool_names": ["knowledge_base_retrieve"]}}
+    assert definition_matches(expected, actual)
+    actual["allowed_tools"]["tool_names"].append("another_tool")
+    assert not definition_matches(expected, actual)
 
 
 def test_native_knowledge_tool_is_shared_and_has_no_local_documents():
@@ -356,6 +417,7 @@ def test_low_confidence_is_routed_to_review_and_not_confirmed(sources, settings)
                 confidence=0.74,
                 findings=["Uncertain observation"],
                 rfdsReference="Sector B azimuth 120 degrees",
+                observedAzimuthDegrees=120.0,
             )
         ]
     )
@@ -381,12 +443,47 @@ def test_validation_rejects_unbound_ids_quotes_and_empty_findings(sources, setti
         "confidence": 0.9,
         "findings": ["Observed 127 degrees, planned 120 degrees"],
         "rfdsReference": "Sector B azimuth 120 degrees",
+        "observedAzimuthDegrees": 127.0,
         **change,
     }
     with pytest.raises(ValueError, match=error):
         sources.validation_results(
             Assessments(assessments=[Assessment(**value)]), packets, settings
         )
+
+
+@pytest.mark.parametrize("observed,compliant", [(120.0, True), (127.0, False), (119.0, False)])
+def test_azimuth_policy_does_not_accept_an_invented_tolerance(
+    sources, settings, observed, compliant
+):
+    packets, _ = sources.validation_inputs(["PHOTO-20"])
+    assessment = Assessment(
+        evidenceId="PHOTO-20",
+        compliant=True,
+        confidence=0.9,
+        findings=["Visible direction is within an assumed acceptable tolerance."],
+        rfdsReference="Sector B azimuth 120 degrees",
+        observedAzimuthDegrees=observed,
+    )
+    result = sources.validation_results(Assessments(assessments=[assessment]), packets, settings)[0]
+    assert result["compliant"] is compliant
+    if not compliant:
+        assert "No tolerance was supplied" in result["findings"][-1]
+    assert assessment.compliant is True
+
+
+def test_azimuth_compliance_cannot_substitute_a_missing_observation(sources, settings):
+    packets, _ = sources.validation_inputs(["PHOTO-20"])
+    assessment = Assessment(
+        evidenceId="PHOTO-20",
+        compliant=True,
+        confidence=0.9,
+        findings=["The RFDS gives a planned direction, but no observed direction is visible."],
+        rfdsReference="Sector B azimuth 120 degrees",
+        observedAzimuthDegrees=None,
+    )
+    with pytest.raises(ValueError, match="visible observation"):
+        sources.validation_results(Assessments(assessments=[assessment]), packets, settings)
 
 
 def test_gap_analysis_produces_contract_valid_proposal_without_authority(sources, settings):

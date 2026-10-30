@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -172,11 +173,37 @@ class Sources:
                     raise ValueError("RFDS citation is for the wrong sector")
             elif quote is not None:
                 raise ValueError("RFDS cannot be cited without a supplied source")
+            compliant = assessment.compliant
+            azimuth_check = any(item["rfdsCheck"] for item in packet["checklist"])
+            observed = assessment.observedAzimuthDegrees
+            if azimuth_check:
+                planned = re.fullmatch(
+                    r"Sector \S+ azimuth ([0-9]+(?:\.[0-9]+)?) degrees", quote or ""
+                )
+                if planned is None or not 0 <= float(planned[1]) <= 360:
+                    raise ValueError("RFDS must supply an unambiguous planned azimuth")
+                if observed is None:
+                    if compliant:
+                        raise ValueError("Azimuth compliance requires a visible observation")
+                else:
+                    target = float(planned[1])
+                    difference = abs(observed - target) % 360
+                    deviation = min(difference, 360 - difference)
+                    if deviation != 0:
+                        compliant = False
+                        findings = [
+                            *findings,
+                            f"RFDS policy check: observed {observed:g} degrees, planned "
+                            f"{target:g} degrees, deviation {deviation:g} degrees. "
+                            "No tolerance was supplied; this mismatch is not compliant.",
+                        ]
+            elif observed is not None:
+                raise ValueError("An azimuth observation requires an RFDS checklist check")
             result = {
                 "validationResultId": f"AI-{uuid4()}",
                 "photoId" if packet["kind"] == "photo" else "artifactId": packet["evidenceId"],
                 "checklistItemCode": row.get("checklistItemCode"),
-                "compliant": assessment.compliant,
+                "compliant": compliant,
                 "confidence": assessment.confidence,
                 "findings": findings,
                 "rfdsArtifactId": rfds["artifactId"] if rfds else None,

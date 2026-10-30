@@ -3,7 +3,9 @@
 The document path is private Blob Storage in **Sweden Central** -> one native
 **Azure Blob knowledge source** in France Central Search -> one shared
 **Foundry IQ knowledge base** -> the coordinator's native MCP tool.
-Fabric facts/readiness remain explicitly stubbed.
+Default facts/readiness use the explicit local stub. An optional native Fabric IQ
+binding uses an existing external Data Agent for local synthetic-flow verification;
+see [the Fabric test path](#existing-fabric-for-local-verification).
 
 ## What IQ manages
 
@@ -56,10 +58,10 @@ model-authored answers are not proof of retrieval. This adapter is verified for
 the short generated text documents whose chunks retain their identity headers,
 not arbitrary long documents.
 
-Native permission enforcement/user-token forwarding is not configured. Do not
+Document user-token forwarding is not configured. Do not
 put real multi-customer data in this shared source on the strength of a prompt
-or site allowlist. Future Fabric facts still require a real authenticated Data
-Agent tool; connecting IQ does not make the entire coordinator code-free.
+or site allowlist. The optional Fabric tool below separately uses delegated user
+authentication; it does not change document permissions.
 
 Search Basic uses one replica/partition, Entra-only authentication and the free
 semantic allowance. It is billable and not an HA configuration. Search's managed
@@ -71,6 +73,15 @@ authentication remain disabled. The HNS-enabled account is accessed through its
 Blob interface (`isADLSGen2: false`); ACL ingestion is not enabled.
 
 ## Provision and populate
+
+IQ definitions do not require document uploads. Add `--definitions-only` to
+`agents.knowledge_setup` to create/read back the native source and knowledge base
+without asset files, Blob uploads, ingestion polling or model inference.
+`knowledge-definition-receipt.json` records that configuration-only result; it is
+not evidence of successful ingestion. The fresh-project bootstrap uses this mode
+by default, with document loading and smoke checks opt-in via `--seed-and-verify`.
+Without `--definitions-only`, the standalone knowledge setup below also populates
+and verifies the synthetic documents as before.
 
 Use the authenticated target subscription and verified project, not copied
 development IDs. This Bicep entry point attaches knowledge to an existing project;
@@ -166,3 +177,95 @@ original Blob files are retained, but are not the current demo path.
 Cross-region ingestion moves document text into approved France Central Search;
 Blob/model resources stay in Sweden Central. No Fabric resource, Dataverse write,
 approval, business action or package generation is introduced.
+
+## Existing Fabric for local verification
+
+**Fabric is an external test dependency, never part of portal/Bicep/bootstrap
+deployment.** The opt-in `agents.fabric_setup` utility can align an explicitly
+authorized existing Data Agent/KQL database with provisional v0.1.0 fixtures.
+It backs up the agent definition, refuses unrelated owned-table replacements,
+and proves independently computed KQL readiness against all 70 scenario/site
+rows before publishing the materialized facts. It does not modify the existing
+notebook, pipeline, semantic model or old tables, or create a workspace/capacity.
+Do not run it against an unapproved target.
+
+The Data Agent must select `CloseoutContractFactsV01` and its actual columns in
+both draft and published definitions. Base-row lookup must filter `siteId`,
+`program` and `scenario` before interpreting child arrays. Empty blocker arrays
+do not mean a missing site. The real contract fields are
+`workOrders[].workOrderType/status/caseId` and
+`photos[].isCurrent/replacesPhotoId`; invented fields and blocker-only inner
+joins previously caused false "no facts" answers for Ready and rework scenarios.
+
+Use the signed-in operator's existing Fabric permissions and the documented
+[`UserEntraToken` delegation](https://learn.microsoft.com/azure/foundry/agents/how-to/configure-user-delegation)
+for a project `RemoteTool` connection to the exact published Data Agent MCP URL.
+The audience is `https://analysis.windows.net/powerbi/api` and delegated scope is
+`https://analysis.windows.net/powerbi/api/DataAgent.Execute.All`. See
+[manual connection setup](MANUAL_STEPS.md#external-fabric-test-connection).
+Fresh bootstrap can instead accept the same settings through `--fabric-config`,
+validate the selected Foundry project connection and, with explicit
+`--create-fabric-connection`, create it when absent. Interactive bootstrap
+prompts for the settings; local stub facts require `--facts-mode stub`.
+This binds an Azure connection to external Fabric; it does not deploy Fabric.
+The development connection was exercised without creating an application,
+client secret or granting consent. Other tenants may require administrator
+consent: an authentication/consent failure is a failure, never a stub fallback.
+
+Keep the selected target in ignored `.local\foundry\fabric-alignment\native.json`:
+
+```json
+{
+  "workspaceId": "<existing workspace GUID>",
+  "dataAgentId": "<existing published Data Agent GUID>",
+  "databaseId": "<existing KQL database GUID>",
+  "kustoEndpoint": "https://<existing cluster>.kusto.fabric.microsoft.com",
+  "connectionName": "<existing Foundry project connection name>",
+  "toolName": "DataAgent_<actual exposed tool name suffix>"
+}
+```
+
+Register a separate pinned local configuration, preserving the default stub
+configuration and document IQ connection:
+
+```powershell
+uv run --frozen --extra agents python -m agents register --endpoint "<project endpoint>" --deployment "<existing deployment>" --model "<model name>" --model-version "<version>" --knowledge-config .local\foundry\knowledge.json --fabric-config .local\foundry\fabric-alignment\native.json --config .local\foundry\fabric-config.json
+uv run --frozen --extra agents python -m agents gaps --config .local\foundry\fabric-config.json --site SE-STO-0042 --program CUST-A-5G-ROLLOUT --scenario initial-blocked
+uv run --frozen --extra agents python -m agents gaps --config .local\foundry\fabric-config.json --site SE-GOT-0017 --program CUST-A-5G-ROLLOUT --scenario fallback-ready
+uv run --frozen --extra agents python -m agents gaps --config .local\foundry\fabric-config.json --site SE-STO-0042 --program CUST-A-5G-ROLLOUT --scenario replacements-reviewed-rework-open
+```
+
+The new immutable coordinator version replaces **all local function declarations**
+with `fabric_iq_preview` and retains native document MCP. Validation remains on
+its existing version; neither inference models nor document resources change.
+In the coordinator playground select the native version and include, for example,
+`siteId SE-STO-0042, program CUST-A-5G-ROLLOUT, scenario initial-blocked`.
+Playground answers alone do not satisfy the deterministic verification below.
+
+Expected CLI outcomes are exactly three initial gaps
+(`CHK-A-AZ-B`, `CHK-A-GROUNDING`, `PL-0042-01`) with current photo/latest-result
+citations, retrieved RFDS/version and a proposed rework; no gaps/rework for the
+Ready fallback; and only `RW-0042-01`, without another proposed rework, after
+accepted replacements while active-case rework is still open.
+
+Native Data Agent output is synthesized prose, **not** the stub JSON contract.
+The local verifier separately reads the actual materialized KQL row, checks its
+identity/record schemas, and compares final gap IDs and citations against that
+snapshot. This read is not supplied as agent facts: the agent must execute the
+native Fabric tool and document IQ itself. `fabricRetrieval` receipts require an
+actual matching native tool result, explicit scope and exact `sourceRef`;
+`knowledgeRetrieval` still verifies Blob/site/version provenance. Successful
+receipts disclose `native-fabric-iq-synthetic-fixtures` and the separate KQL
+verification mode. Missing/duplicate rows, source failures, invalid citations or
+wrong drafts fail closed. Native fixture mode supports `gaps --program` only:
+local validation overlays and the stub-based `smoke` command are rejected.
+
+These are manually refreshed synthetic facts with **seeded validations**, not
+fresh photo inference, human approvals, production Fabric readiness/Eventstream/
+Activator wiring, Dataverse updates or packages. No denied-user test is claimed.
+The local site allowlist and query filters are not production access controls.
+
+The [headless Blob/Activator plan](HEADLESS-FLOW.md) reuses the existing native
+Fabric IQ tool with a Logic Apps managed-identity invocation of Foundry.
+Verify that exact call and actual tool results before declaring an identity
+blocker. No new authentication, local runner or alternative tool is assumed.

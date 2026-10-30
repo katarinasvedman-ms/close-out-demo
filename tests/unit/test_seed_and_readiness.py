@@ -1,17 +1,37 @@
 import copy
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
+from shared.contract_compatibility import version
 from shared.contract_validation import load_validators
 from shared.readiness import ReadinessStub, evaluate
 from shared.scenarios import SCENARIOS, scenario
-from shared.seed import fabric_extract, validate_snapshot
+from shared.seed import fabric_extract, load_seed, validate_snapshot
 from shared.seed_files import generate_assets
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.parametrize("version_kind", ["newer", "incompatible"])
+def test_seed_rejects_newer_or_incompatible_contract_versions(tmp_path, version_kind):
+    major, minor, _ = version((ROOT / "contracts" / "VERSION").read_text().strip())
+    schema_version = f"{major}.{minor + 1}.0" if version_kind == "newer" else f"{major + 1}.0.0"
+    recipe = json.loads((ROOT / "seed" / "seed.json").read_text())
+    recipe["schemaVersion"] = schema_version
+    source = tmp_path / "seed.json"
+    source.write_text(json.dumps(recipe))
+    with pytest.raises(ValueError, match="schemaVersion"):
+        load_seed(source, ROOT / "contracts")
+
+
+def test_additive_contracts_preserve_the_seed_fixture_source_version():
+    expanded = load_seed(ROOT / "seed" / "seed.json", ROOT / "contracts")
+    assert expanded.recipe["schemaVersion"] == "0.1.0"
+    validate_snapshot(expanded, ROOT / "contracts")
 
 
 def test_seed_has_consistent_relationships_and_main_blockers(snapshot):

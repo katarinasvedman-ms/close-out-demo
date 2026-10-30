@@ -207,6 +207,31 @@ wheels = [
 ]
 
 [[package]]
+name = "azure-eventhub"
+version = "5.15.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/20/bf/96eec5aa57cb08f1e84e1dfa3888e52dbba53e218596cdab5b61d795a1ae/azure_eventhub-5.15.1.tar.gz", hash = "sha256:201de7b6e10b7517c594e529aa7d21c6887ac2a4757fc4850c991a3f640a02fb", size = 378879, upload-time = "2025-10-30T11:28:21.74Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/ba/b54e0f76384b00a8682b1e041673f43947f668dbc8508f026d67446a7d2f/azure_eventhub-5.15.1-py3-none-any.whl", hash = "sha256:ebe1379d228632d12892f0e2d480e0c13a234c384249b0c2c0fe862cd58b3e48", size = 317133, upload-time = "2025-10-30T11:28:23.395Z" },
+]
+
+[[package]]
+name = "azure-functions"
+version = "1.25.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "werkzeug" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6f/eb/745418bd7ae135068a88dcd2e0b3cefd526068a7bbe55cc29d5fb5919080/azure_functions-1.25.0.tar.gz", hash = "sha256:3c737657110b6cfd14e6871515ab66c377b9ceecaca8dcbf5b391d2433424756", size = 143938, upload-time = "2026-08-05T19:12:50.176Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/21/9374de0e429e7a45090c097111fbbcdea019e726b252cbb35428a816ed1c/azure_functions-1.25.0-py3-none-any.whl", hash = "sha256:0d01e52c0871a01a65911bc163a0dfd7f09725ba43cea17a09909cc5d298c1d2", size = 113831, upload-time = "2026-08-05T19:12:51.567Z" },
+]
+
+[[package]]
 name = "azure-identity"
 version = "1.27.0"
 source = { registry = "https://pypi.org/simple" }
@@ -367,11 +392,17 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
+flow = [
+    { name = "azure-eventhub" },
+    { name = "azure-functions" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "agent-framework-foundry", marker = "extra == 'agents'", specifier = "==1.15.0" },
     { name = "azure-ai-projects", marker = "extra == 'agents'", specifier = ">=2.2.0,<2.8.0" },
+    { name = "azure-eventhub", marker = "extra == 'flow'", specifier = ">=5.12,<6" },
+    { name = "azure-functions", marker = "extra == 'flow'", specifier = ">=1.21,<2" },
     { name = "azure-identity", marker = "extra == 'agents'", specifier = "==1.27.0" },
     { name = "azure-storage-blob", marker = "extra == 'agents'", specifier = ">=12.24,<13" },
     { name = "datamodel-code-generator", marker = "extra == 'dev'", specifier = "==0.35.0" },
@@ -384,7 +415,7 @@ requires-dist = [
     { name = "pyyaml", specifier = "==6.0.3" },
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.14.2" },
 ]
-provides-extras = ["agents", "dev"]
+provides-extras = ["agents", "flow", "dev"]
 
 [[package]]
 name = "colorama"
@@ -1547,6 +1578,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/1d/7a/eb316761ec35664ea5174709a68bbd3389de60d4a1ebab8808bfc264ed67/webcolors-25.10.0.tar.gz", hash = "sha256:62abae86504f66d0f6364c2a8520de4a0c47b80c03fc3a5f1815fedbef7c19bf", size = 53491, upload-time = "2025-10-31T07:51:03.977Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e2/cc/e097523dd85c9cf5d354f78310927f1656c422bd7b2613b2db3e3f9a0f2c/webcolors-25.10.0-py3-none-any.whl", hash = "sha256:032c727334856fc0b968f63daa252a1ac93d33db2f5267756623c210e57a4f1d", size = 14905, upload-time = "2025-10-31T07:51:01.778Z" },
+]
+
+[[package]]
+name = "werkzeug"
+version = "3.1.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a4/34/4dd12fc8bb7d61c91467ec3efe415ffa7d5456f799954b40c5bbaeae470e/werkzeug-3.1.9.tar.gz", hash = "sha256:55ca7c70a75689be937aa27f8ff4b018f06ff4838fc73045560bf0f5a1291060", size = 940188, upload-time = "2026-09-27T18:33:41.637Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a1/38/df03f564f43cec2684823f3cccae1a652ee7face1cbaa76fb223096e64d7/werkzeug-3.1.9-py3-none-any.whl", hash = "sha256:6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab", size = 228700, upload-time = "2026-09-27T18:33:39.685Z" },
 ]
 
 [[package]]
