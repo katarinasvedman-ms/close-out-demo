@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from agents.assistant import assistant_definition
+from agents.assistant import assistant_definition, bind_delegated_fabric
 from agents.definitions import definition_hash
 from agents.foundry import definition_matches
 from shared.local_demo import write_json
@@ -20,17 +20,31 @@ def brief_definition(source: dict) -> dict:
     return body
 
 
-def register(endpoint: str, name: str, source_version: str, output: Path) -> dict:
+def register(
+    endpoint: str,
+    name: str,
+    source_version: str,
+    output: Path,
+    *,
+    fabric_connection: str | None = None,
+    create_fabric_connection: bool = False,
+) -> dict:
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.models import PromptAgentDefinition
     from azure.identity import AzureCliCredential
 
+    if create_fabric_connection and not fabric_connection:
+        raise ValueError("--create-fabric-connection requires --fabric-connection")
     with (
         AzureCliCredential() as credential,
         AIProjectClient(endpoint=endpoint, credential=credential) as client,
     ):
         source = client.agents.get_version(agent_name=name, agent_version=source_version)
         body = brief_definition(source.definition.as_dict())
+        if fabric_connection:
+            bind_delegated_fabric(
+                client, credential, body, fabric_connection, create=create_fabric_connection
+            )
         digest = definition_hash(body)
         candidate = None
         for version in client.agents.list_versions(agent_name=name):
@@ -73,8 +87,17 @@ def main() -> None:
     parser.add_argument("--agent-name", required=True)
     parser.add_argument("--source-version", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--fabric-connection")
+    parser.add_argument("--create-fabric-connection", action="store_true")
     args = parser.parse_args()
-    register(args.endpoint, args.agent_name, args.source_version, args.output)
+    register(
+        args.endpoint,
+        args.agent_name,
+        args.source_version,
+        args.output,
+        fabric_connection=args.fabric_connection,
+        create_fabric_connection=args.create_fabric_connection,
+    )
 
 
 if __name__ == "__main__":

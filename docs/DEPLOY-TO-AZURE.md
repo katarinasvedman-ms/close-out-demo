@@ -69,7 +69,8 @@ callback and Eventstream parameters up front. The installer separately records
 foundation and full-runtime progress; a stopped or failed later stage does not
 erase the foundation, saved registrations or original full-deployment state.
 
-The installer publishes both fully bound prompt agents and the locked runtime,
+The installer publishes validation/coordinator prompt agents, a separate
+read-only assistant with its own UserEntraToken Fabric connection, and the locked runtime,
 loads synthetic documents using the existing indexing wait, registers PHOTO-20
 and RFDS, and exports the exact registered playground image/message. It can
 back up and narrowly update compatible existing notebook/pipeline/Activator
@@ -79,7 +80,7 @@ definitions are left unchanged with an owner handoff.
 
 Azure/Foundry publication and playground preparation complete before any Fabric
 permission, Activator, notebook, pipeline or schedule changes. The installer
-prints both agent versions and saves the playground handoff, then asks whether
+prints all agent versions and saves the playground handoff, then asks whether
 to continue with Fabric setup. Answer **n** to retain the Azure setup without
 changing an existing Fabric demo. Azure publication pauses only the selected
 Azure target's workflows when needed, never the existing Fabric Activator.
@@ -98,8 +99,8 @@ rollback or deletion of already provisioned Azure resources is promised.
 Some access cannot be prepared until the new identities exist. Missing access
 produces the exact target, identity and required owner action in `handoff.txt`.
 Direct Data Agent sharing remains an owner confirmation, not an API-proven grant.
-The installer prints the actual workspace, agent and managed-identity names,
-the identity object ID, the item-row **... -> Manage permissions** route and the
+The installer prints the actual workspace and agent, the delegated-user
+requirement, the item-row **... -> Manage permissions** route and the
 **Share** dialog alternative. These instructions are saved before it asks for
 confirmation. Typing `y` does not create the grant.
 The Fabric owner must provide a target-specific approved service-principal Web
@@ -129,12 +130,85 @@ The installer runs no model probe or end-to-end assessment and does not observe
 Activator history or claim connected fresh-target runtime acceptance.
 The advanced portal/bootstrap reference below remains available to administrators.
 
+## Coordinator authentication handoff
+
+The chosen **KQL-backed Fabric Data Agent does not support MI/SPN authentication**.
+The first guided run can publish the agents, knowledge, registered inputs and
+disabled baseline runtime; answer **n** at the Fabric continuation checkpoint.
+It cannot enable that unsupported baseline. The assistant uses the local Azure
+CLI user's delegation; the automatic coordinator needs a separately approved
+renewable user credential. Neither is browser-user ACL isolation.
+
+For a fresh target, obtain tenant/target-owner approval for delegated automation.
+The authorized user needs Foundry project/model access, Data Agent Read and KQL
+Viewer. Entra registration/consent and Key Vault management permissions are
+separate from Azure deployment permission. The installer does not silently
+create a public client, grant consent or authorize a user for this exception.
+
+From the repository root after that first run:
+
+```powershell
+$profile = Get-Content .local\installer\demo-review\profile.json -Raw | ConvertFrom-Json
+$client = ".local\installer\demo-review\coordinator-client.json"
+uv run --frozen --extra agents python -m agents.coordinator_oauth register `
+  --name "<approved-dedicated-public-app-name>" --tenant $profile.tenantId `
+  --create --output $client
+
+# Select the flow Key Vault in THIS target group; do not reuse another demo's vault.
+az keyvault list --subscription $profile.subscriptionId `
+  --resource-group $profile.resourceGroup --query "[].{name:name,id:id}" --output table
+$vaultName = "<selected-flow-key-vault-name>"
+$vaultId = az keyvault show --subscription $profile.subscriptionId `
+  --resource-group $profile.resourceGroup --name $vaultName --query id --output tsv
+$secretName = "<new-coordinator-credential-name>"
+uv run --frozen --extra agents python -m agents.coordinator_oauth sign-in `
+  --config $client --vault-resource-id $vaultId --secret-name $secretName
+
+.\scripts\deploy-demo.ps1 -Environment demo-review `
+  -CoordinatorClientConfig $client `
+  -CoordinatorCredentialUri "https://$vaultName.vault.azure.net/secrets/$secretName"
+```
+
+Use the same environment name throughout. Registration metadata is nonsecret;
+the helper uses public-client loopback/PKCE, keeps its token cache in memory
+and writes the renewable credential directly to a **new Key Vault secret**.
+It refuses an existing secret instead of overwriting one. Do not repeat
+sign-in just to inspect a working credential. No password/client secret or
+local token file is created.
+
+The resumed installer validates tenant/credential ownership metadata without
+reading its value. It shows a role-assignment what-if and asks before granting
+the Logic App identity **Key Vault Secrets Officer on only that secret**.
+It creates/reuses `close-out-coordinator-fabric-user`, publishes a new immutable
+readable coordinator using native Fabric/document IQ, and renders the delegated
+workflow into the ZIP. Token refresh/rotation precedes inference; runs are
+serialized, acknowledgement asynchronous, and Blob writes remain MI.
+The original structured config and validation publisher stay separate.
+Read-only assistant publication creates no UI host.
+
+Only the nonsecret client metadata and secret URI are retained in installer
+state. Subsequent unchanged reruns can omit the two flags. A different
+client/secret is not silently rebound onto saved target state. Tenant policy,
+revocation or expiry can require an owner-managed reauthorization; uninterrupted
+operation is not guaranteed. Callback app credentials, delegated notebook runs
+and the Key Vault-held Azure Files Storage key remain separate dependencies.
+Never describe this as all-MI.
+
+Continue with the existing Fabric permission/binding checkpoint only after
+approval. These checks and publication are **not fresh-target runtime proof**.
+No inference is run by installation. Validate a real registered submission
+separately before demonstrating the target. For local startup/configuration,
+see [the README](../README.md#local-close-out-workbench).
+
 ## Selected flow and deployment boundaries
 
 The required deployment target is **playground validation agent -> its
 trigger_fabric_eventstream OpenAPI publication tool -> existing Fabric readiness
 and closeout-headless-v02-dispatch -> direct coordinator Logic App ->
-close-out-coordinator -> raw response Blob**.
+close-out-coordinator -> readable brief plus raw response Blob** when the
+guided delegated configuration above is supplied. The advanced baseline below
+still captures raw JSON only and remains disabled until its authentication gate
+is resolved.
 See [the exact flow and identity matrix](HEADLESS-FLOW.md#selected-playground-to-blob-flow).
 The validation publisher Function remains; a coordinator Function is not in this path.
 
@@ -330,11 +404,14 @@ retrieval or unattended authentication. The optional verification requires both
 actual Fabric and document retrieval receipts; stub receipts cannot pass it.
 
 Older local fixture verification used a delegated `UserEntraToken` connection.
-Bootstrap now requires project-managed-identity auth; it rejects rather than
-overwrites older delegated connections. The Fabric owner must grant the selected
-Foundry project identity Read on the published Data Agent and database Viewer on
-its KQL source. These grants are not created by Azure RBAC or by merely creating
-the Foundry connection. Query filters are not authorization.
+The advanced bootstrap requires project-managed-identity auth; it rejects rather
+than overwrites older delegated connections. **This baseline is unsupported for
+the selected KQL-backed Data Agent.** Project-MI Read/Viewer grants do not resolve
+that authentication limitation. Use the guided installer's explicit
+[delegated coordinator handoff](#coordinator-authentication-handoff), and grant
+the authorized users Data Agent Read/KQL Viewer. Those grants are not created by
+Azure RBAC or by merely creating a Foundry connection. Query filters are not
+authorization.
 
 For deliberately local stub facts, use `--facts-mode stub` instead of a Fabric
 config and omit `--create-fabric-connection`. This preserves the old local-client
@@ -342,7 +419,9 @@ mode, not playground-executable facts.
 
 ## Optional: load documents and verify the demo
 
-Only when document access is available, rerun with the explicit option:
+The following is the historical local verification interface, not a way to
+enable KQL grounding with the unsupported MI connection. Use it only with an
+independently supported binding and document access:
 
 ```powershell
 uv run --frozen --extra agents python -m agents.bootstrap --resource-group "<resource-group>" --deployment "<deployment-name>" --fabric-config .local\fabric-settings.json --seed-and-verify

@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from agents import bootstrap, fabric_connection, knowledge_setup
-from agents.definitions import FabricSettings
+from agents.definitions import AgentBinding, FabricSettings
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -386,6 +386,60 @@ def test_flow_completion_rejects_missing_foundation_before_agent_publication(
             "target-group", "portal-deployment", fabric=fabric_settings, publish_runtime=True
         )
     assert all(executable == "az" for executable, _ in calls)
+
+
+def test_optional_coordinator_workflow_pins_version_without_replacing_structured_config(
+    monkeypatch, tmp_path, infra_values, fabric_settings
+):
+    infra_values["flow"] = {
+        "adapterName": "target-function",
+        "workflowName": "target-workflow",
+        "publisherConfig": {
+            "serverUrl": "https://target-function.azurewebsites.net",
+            "audience": "api://target-api",
+        },
+    }
+    calls = mock_commands(monkeypatch, tmp_path, infra_values)
+    monkeypatch.setattr(bootstrap, "ensure_connection", lambda *args, **kwargs: {})
+    state = bootstrap.complete("target-group", "portal-deployment", fabric=fabric_settings)
+    structured = (state / "config.json").read_bytes()
+    workflow = tmp_path / "coordinator-workflow.json"
+    workflow.write_text(
+        json.dumps(
+            {
+                "definition": {
+                    "actions": {
+                        "Start_agent_response": {
+                            "inputs": {"body": {"agent_reference": {"version": "31"}}}
+                        }
+                    }
+                }
+            }
+        )
+    )
+    binding = AgentBinding(name="close-out-coordinator", version="31", definitionHash="readable")
+    report = bootstrap.publish_flow(
+        infra_values, state, coordinator=binding, coordinator_workflow=workflow
+    )
+    assert (state / "config.json").read_bytes() == structured
+    pinned = json.loads((state / "target-workflow-settings.json").read_text())
+    assert pinned["FLOW_COORDINATOR_AGENT_VERSION"] == "31"
+    assert pinned["Workflows.coordinator.FlowState"] == "Disabled"
+    assert report["coordinatorAgent"]["version"] == "31"
+    assert report["coordinatorOutput"] == "markdown-and-raw-json"
+    package = next(args for exe, args in calls if exe == "pwsh")
+    assert package[package.index("-CoordinatorWorkflow") + 1] == str(workflow)
+    calls.clear()
+    with pytest.raises(ValueError, match="must be supplied together"):
+        bootstrap.publish_flow(infra_values, state, coordinator=binding)
+    with pytest.raises(ValueError, match="must be supplied together"):
+        bootstrap.publish_flow(infra_values, state, coordinator_workflow=workflow)
+    wrong = binding.model_copy(update={"version": "32"})
+    with pytest.raises(ValueError, match="must match"):
+        bootstrap.publish_flow(
+            infra_values, state, coordinator=wrong, coordinator_workflow=workflow
+        )
+    assert calls == []
 
 
 def test_flow_runtime_failure_does_not_claim_completed_deployment(

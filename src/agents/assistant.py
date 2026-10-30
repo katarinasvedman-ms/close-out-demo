@@ -81,6 +81,22 @@ class AssistantSettings(StrictOutput):
     sourceVersion: str
 
 
+def bind_delegated_fabric(client, credential, body: dict, name: str, *, create: bool) -> None:
+    facts = next(tool for tool in body["tools"] if tool.get("server_label") == "fabric-facts")
+    source_connection = client.connections.get(facts["project_connection_id"])
+    if source_connection.target != facts["server_url"]:
+        raise ValueError("Source Fabric connection target differs from the native tool")
+    token = credential.get_token("https://management.azure.com/.default")
+    with httpx.Client(
+        headers={"Authorization": f"Bearer {token.token}"},
+        timeout=30,
+        follow_redirects=False,
+    ) as management:
+        facts["project_connection_id"] = reconcile_delegated_connection(
+            management, source_connection.id, name, facts["server_url"], create=create
+        )
+
+
 def assistant_definition(source: dict) -> dict:
     tools = copy.deepcopy(source.get("tools", []))
     documents = [tool for tool in tools if tool.get("server_label") == "documents"]
@@ -142,23 +158,9 @@ def register(
         if any(row.metadata.get("component") != "close-out-workbench" for row in versions):
             raise ValueError(f"Refusing to modify an unrelated agent: {name}")
         if fabric_connection:
-            facts = body["tools"][1]
-            source_connection = client.connections.get(facts["project_connection_id"])
-            if source_connection.target != facts["server_url"]:
-                raise ValueError("Source Fabric connection target differs from the native tool")
-            token = credential.get_token("https://management.azure.com/.default")
-            with httpx.Client(
-                headers={"Authorization": f"Bearer {token.token}"},
-                timeout=30,
-                follow_redirects=False,
-            ) as management:
-                facts["project_connection_id"] = reconcile_delegated_connection(
-                    management,
-                    source_connection.id,
-                    fabric_connection,
-                    facts["server_url"],
-                    create=create_fabric_connection,
-                )
+            bind_delegated_fabric(
+                client, credential, body, fabric_connection, create=create_fabric_connection
+            )
         digest = definition_hash(body)
         candidate = None
         for row in versions:

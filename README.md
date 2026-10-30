@@ -30,7 +30,8 @@ then approve preparation of the new dedicated registrations and API settings.
 Confirm the callback authentication approach only with target-owner approval;
 this does not create a password or Fabric connection.
 
-Azure infrastructure, both Foundry agents, native document IQ, runtime packages
+Azure infrastructure, validation/coordinator agents, the separate read-only
+assistant, native document IQ, runtime packages
 and playground inputs are prepared **before Fabric permission or binding changes**.
 The installer prints the project and agent versions, then asks whether to continue
 with Fabric setup. Answer **n** to stop there and preserve your existing Fabric demo.
@@ -39,8 +40,9 @@ Do not submit the playground message until Fabric setup and runtime enablement f
 **Fabric is not provisioned.** Select existing compatible Fabric items. Only
 explicitly approved bindings, permissions and schedule updates are applied;
 incompatible or unsupported changes are handed to the owner rather than guessed.
-For example: "Grant this Foundry project identity direct Read on this Data Agent,
-then rerun the same command." New Azure identities are displayed after provisioning.
+The selected KQL-backed Data Agent requires **delegated user authentication**,
+not the Foundry project identity or a service principal. Its authorized users
+need Data Agent Read and KQL Viewer; approval is not proof of working access.
 The existing Fabric callback needs an approved target-specific Web connection;
 the installer does not create its credential or silently repoint a shared connection.
 
@@ -50,6 +52,19 @@ prepared message. The handoff is saved in `.local\installer\<environment>\handof
 Installation is **not end-to-end proof**: connected runtime acceptance remains
 separate from Azure preparation. See [deployment details](docs/DEPLOY-TO-AZURE.md)
 and the [owner-only steps](docs/MANUAL_STEPS.md#playground-flow-deployment-checklist).
+
+**Coordinator authentication is an explicit handoff.** The first run can prepare
+all agents and a disabled baseline runtime without a renewable user credential.
+It refuses Fabric continuation/enablement until the target owner approves
+delegated automation and authorizes a dedicated public OAuth client into Key
+Vault. Follow [the exact setup/resume steps](docs/DEPLOY-TO-AZURE.md#coordinator-authentication-handoff).
+The resume parameters are `-CoordinatorClientConfig` (nonsecret registration
+metadata) and `-CoordinatorCredentialUri` (an unversioned secret URI, never its
+value). With that configuration, setup publishes the readable coordinator,
+secret-scoped read/rotation permission and the delegated workflow that saves
+both `.md` and diagnostic `.json` files. Structured CLI configurations remain
+separate. No cloud UI, Fabric provisioning, automatic consent or inference is
+included in installation.
 
 ### Advanced: portal deployment
 
@@ -280,8 +295,11 @@ Run the loopback-only Python API and Vite in separate terminals:
 
 ```powershell
 uv sync --frozen --extra agents --python 3.11
+# Azure operations use this operator's existing permissions:
+az login
 uv run --frozen --extra agents python -m agents.workbench
-# Second terminal, after the npm ci step above:
+# Second terminal, from the repository root (Node 22.12+ within Node 22):
+npm ci
 npm run dev --workspace @close-out/presenter
 ```
 
@@ -290,6 +308,42 @@ Use Vite's printed localhost URL. Its `/api/presenter` proxy defaults to
 uses a different `--port`. Keep the API loopback-only: it uses the signed-in
 operator's Azure CLI identity, not browser-held credentials or per-user ACLs.
 This development server is not a production hosting/authentication solution.
+Nothing in this UI needs deploying to Azure. Keep both terminals running;
+Ctrl+C stops each local server. Case browsing works without agent configuration;
+chat, registered-photo validation and saved briefs require their explicit
+configuration and operator access. Do not copy token caches or Key Vault secret
+values to another machine.
+
+### Use the guided installer's target locally
+
+The installer publishes the assistant and writes its ignored configuration to
+`.local\fresh\<subscription-id>\<foundry-name>\assistant.json`; it does not start
+the UI. On the machine where setup ran, load its saved target and prepare the
+local validation configuration without inference:
+
+```powershell
+$setup = Get-Content .local\installer\demo-review\state.json -Raw | ConvertFrom-Json
+$target = $setup.infra
+$state = Join-Path ".local\fresh" (Join-Path $target.subscriptionId $target.foundryName)
+uv run --frozen --extra agents python -m agents.workbench_validation `
+  --endpoint $target.projectEndpoint --storage-url $target.flow.storageUrl `
+  --source-run-id $setup.playground.runId --source-batch-id $setup.playground.batchId `
+  --evidence PHOTO-20 --output "$state\validation.json"
+uv run --frozen --extra agents python -m agents.workbench `
+  --config "$state\assistant.json" --validation-config "$state\validation.json"
+# In the second terminal:
+npm run dev --workspace @close-out/presenter
+```
+
+Replace `demo-review` with the environment used for installation. The preflight
+checks the actual registered input bytes and publication-enabled agent; it does
+not submit a photo or invoke a model. Brief storage comes from that validation
+configuration. On another machine, sign in with an authorized operator and
+recreate the nonsecret assistant/validation settings using the commands below
+and the registered run/batch IDs in the deployment handoff. Local `.local`
+settings and submission receipts are not shipped in Git.
+
+### Features and configuration
 
 **Close-out briefs** lists saved review documents for the selected site's case,
 with a readable Markdown view and Refresh. Listing/reading never starts inference.

@@ -17,7 +17,7 @@ The Azure/Foundry foundation comes before application client-ID or Fabric
 selection prompts. Saved registrations are reused; automatic preparation needs
 explicit approval and Entra permission. Existing client IDs are an optional
 administrator-supplied alternative, not a prerequisite for the foundation.
-Both Foundry agents, native document IQ, runtime packages and playground inputs
+Validation/coordinator/assistant agents, native document IQ, runtime packages and playground inputs
 are prepared before Fabric grants or binding changes. At the Azure-ready
 checkpoint, answer **n** to retain that setup without changing an existing Fabric demo.
 
@@ -27,8 +27,9 @@ The genuine owner boundaries are:
 |---|---|
 | Azure/Entra administrator | Approve the target's costs/network/authentication choices and supply missing resource-creation, role-assignment or application-registration permission. A supplied existing API app must be single-tenant with identifier URI `api://<client-id>` and token version 2. |
 | Azure policy owner | Separately approve any supported `SecurityControl=Ignore` exception for the exact dedicated resource group. The installer sets the tag after confirmation when the operator has permission; portal steps are only a fallback. |
-| Fabric Data Agent owner | Give the printed **Foundry project** identity direct Read on the selected published Data Agent. No extra workspace-wide access is substituted. |
-| KQL database owner | Allow or perform the additive Viewer grant for that same project identity when the installer cannot do it. |
+| Delegated automation / tenant owner | Approve the public OAuth client, consent and user authorization into a new target Key Vault secret. Supply only nonsecret client metadata and its secret URI to the installer. |
+| Fabric Data Agent owner | Give the coordinator's authorized **Entra user** direct Read on the published Data Agent. The interactive assistant's operator needs access separately. KQL-backed Data Agent MI/SPN authentication is unsupported. |
+| KQL database owner | Grant the same authorized users Viewer on the selected KQL database. A project-MI grant does not fix the unsupported authentication path. |
 | Fabric workspace owner | Approve the publisher Function's Contributor grant on the selected workspace. Azure RBAC does not provide it. |
 | Fabric connection owner / Entra administrator | Prepare an approved service-principal Web connection for the exact new Logic App host and API audience, using the printed callback client ID/tenant. Store secrets only in Key Vault/Fabric credential storage; confirm identity and current expiry. Existing connection URLs cannot be patched through the supported API. |
 | Notebook/Activator/pipeline owner | Supply compatible existing event/snapshot contracts and approve only dedicated-item binding changes and bounded schedule renewal. Custom code or unsupported definitions are left for this owner, not replaced. |
@@ -118,22 +119,23 @@ Rerunning `--publish-flow` disables both workflows again.
    **Function** identity Contributor in only the approved Fabric workspace.
    This broader-than-item role is required by the tested Eventstream endpoint;
    obtain explicit approval rather than substituting workspace access for reads.
-2. Grant the **Foundry project** identity direct Read on the published Data Agent:
+2. Resolve the [coordinator authentication handoff](DEPLOY-TO-AZURE.md#coordinator-authentication-handoff)
+   before enablement. Grant the coordinator's authorized **Entra user** direct
+   Read on the published Data Agent:
    in the workspace item list, use the **Data Agent row's ... menu -> Manage
    permissions -> Direct access -> Add user**. Alternatively, open the agent's
    **Share** dialog, select its **Manage permissions** icon and **Advanced** if
-   needed. The installer prints the actual workspace, agent and project identity
-   names with the exact identity object ID, and saves them in `handoff.txt`.
-   Select that identity, leave additional permissions unchecked, turn email
+   needed. The installer prints the actual workspace/agent and delegated-user
+   requirement, and saves them in `handoff.txt`.
+   Select the user authorized through the public OAuth client, not the client
+   application or Foundry project MI. Leave additional permissions unchecked, turn email
    notification off, and select **Grant**. Answering `y` in the installer only
    confirms that this manual step is done; it does not grant access.
    If the controls are unavailable, ask the Data Agent owner to perform it.
-   Grant the identity Viewer on the underlying KQL database. To resolve its application ID read-only:
-   `az ad sp show --id "<projectPrincipalId>" --query appId --output tsv`.
-   In the KQL database, an authorized owner can grant with
-   `.add database ['<database-name>'] viewers ('aadapp=<project-app-id>;<tenant-id>')`
-   and verify with `.show database ['<database-name>'] principals`.
-   Use `.add`, not `.set`, which would replace other grants.
+   The database owner must give that user Viewer on the underlying KQL database,
+   preserving other grants. The local assistant's Azure CLI operator needs
+   these read permissions separately. KQL-backed Data Agent authentication does
+   not support MI/SPN; repeating a project-MI grant cannot fix it.
 3. Reuse the existing isolated readiness projector, tables, Data Agent live-snapshot
    guidance and `closeout-headless-v02-dispatch`. Back up definitions before
    changing bindings; do not repoint another deployment's working items.
@@ -332,6 +334,13 @@ not a new custom OAuth application or an unattended authentication workaround.
 Reason: the selected KQL-backed Fabric Data Agent does not support project MI
 or service-principal authentication. This is an explicitly approved
 **existing-target demo exception**, not part of portal/bootstrap deployment.
+The guided installer now supports an explicitly owner-authorized fresh-target
+resume with `-CoordinatorClientConfig` and `-CoordinatorCredentialUri`.
+Follow [the authentication handoff](DEPLOY-TO-AZURE.md#coordinator-authentication-handoff)
+for public-client registration, interactive authorization and secret-only
+rotation access. It refuses Fabric continuation/enablement without this
+configuration, and never performs consent/sign-in automatically. The advanced
+portal/bootstrap default below remains unchanged.
 The verified structured baseline pins coordinator version 17, its separate
 `close-out-coordinator-fabric-user` connection, and the current native document
 IQ connection. The assistant, original MI connection and Fabric items are

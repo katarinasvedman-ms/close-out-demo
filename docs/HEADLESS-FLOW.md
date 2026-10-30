@@ -95,6 +95,10 @@ Render the already approved delegated workflow with `agents.coordinator_workflow
 deploy it following [the manual procedure](MANUAL_STEPS.md#readable-coordinator-brief-publication).
 Do not replace an actual live ZIP with repository defaults. This is opt-in;
 fresh portal/bootstrap publication is not migrated by this command.
+The guided installer separately supports this path with explicit nonsecret
+OAuth client metadata and a Key Vault credential URI; see the
+[authentication handoff](DEPLOY-TO-AZURE.md#coordinator-authentication-handoff).
+It also publishes the read-only assistant, but never hosts the UI in Azure.
 
 The workflow retains the raw `.json` sidecar, then requires successful native
 receipts from both sources, no failed tool calls, the exact full immutable
@@ -104,6 +108,11 @@ Missing/conflicting evidence or an unavailable/empty/JSON-shaped answer must not
 become a published brief. Failed guards fail the workflow and retain the raw
 response for diagnosis. These checks are **not independent verification of every
 claim, measurement, citation or requirement** and do not compute readiness.
+On the existing target, readable version 19 produced both blobs with both native
+sources and the exact immutable revision. Its Markdown did not retain every
+latest validation ID, and source-returned fixture `.invalid` URLs can appear
+as links. The raw sidecar retains diagnostic evidence. This is a reviewable
+demo draft, not a complete citation-quality acceptance gate or fresh-target proof.
 
 The readable file is adjacent to the trace:
 `results/coordinator/<runId>/<caseId>/<readiness>/<transitionId>/<workflowRunId>.md`,

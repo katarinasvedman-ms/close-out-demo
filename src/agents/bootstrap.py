@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from uuid import uuid4
 
-from agents.definitions import FabricSettings, FoundrySettings, PublisherSettings
+from agents.definitions import AgentBinding, FabricSettings, FoundrySettings, PublisherSettings
 from agents.fabric_connection import ensure_connection
 from agents.knowledge_setup import knowledge_settings
 from shared.local_demo import write_json
@@ -58,7 +58,13 @@ def validate_target(values: dict) -> None:
             raise ValueError("Publisher endpoint does not describe the selected flow adapter")
 
 
-def publish_flow(values: dict, state: Path) -> dict:
+def publish_flow(
+    values: dict,
+    state: Path,
+    *,
+    coordinator: AgentBinding | None = None,
+    coordinator_workflow: Path | None = None,
+) -> dict:
     flow = values["flow"]
     settings = FoundrySettings.model_validate_json((state / "config.json").read_text())
     if not settings.fabric or settings.publisher != PublisherSettings.model_validate(
@@ -69,17 +75,26 @@ def publish_flow(values: dict, state: Path) -> dict:
         )
     if settings.endpoint != values["projectEndpoint"]:
         raise ValueError("Agent configuration does not describe the selected Foundry project")
+    if (coordinator is None) != (coordinator_workflow is None):
+        raise ValueError("An explicit coordinator version and workflow must be supplied together")
+    coordinator = coordinator or settings.closeout
+    if coordinator_workflow:
+        workflow = json.loads(coordinator_workflow.read_text(encoding="utf-8"))
+        reference = workflow["definition"]["actions"]["Start_agent_response"]["inputs"]["body"][
+            "agent_reference"
+        ]
+        if reference.get("version") != coordinator.version:
+            raise ValueError("Coordinator workflow and published version must match")
     if any(
-        binding.version == "pending-publication"
-        for binding in (settings.validation, settings.closeout)
+        binding.version == "pending-publication" for binding in (settings.validation, coordinator)
     ):
         raise ValueError("Publish actual agent versions before deploying the flow")
     settings_files = {
         flow["adapterName"]: {"FLOW_FOUNDRY_CONFIG_JSON": settings.model_dump_json()},
         flow["workflowName"]: {
             "FLOW_FOUNDRY_PROJECT_ENDPOINT": settings.endpoint,
-            "FLOW_COORDINATOR_AGENT_NAME": settings.closeout.name,
-            "FLOW_COORDINATOR_AGENT_VERSION": settings.closeout.version,
+            "FLOW_COORDINATOR_AGENT_NAME": coordinator.name,
+            "FLOW_COORDINATOR_AGENT_VERSION": coordinator.version,
             "Workflows.coordinator.FlowState": "Disabled",
             "Workflows.validation.FlowState": "Disabled",
         },
@@ -112,6 +127,7 @@ def publish_flow(values: dict, state: Path) -> dict:
         str(ROOT / "scripts" / "package-flow.ps1"),
         "-OutputDirectory",
         str(packages),
+        *(("-CoordinatorWorkflow", str(coordinator_workflow)) if coordinator_workflow else ()),
     )
     deployments = {}
     for app, kind, filename, extra in (
@@ -148,7 +164,8 @@ def publish_flow(values: dict, state: Path) -> dict:
         "phase": "runtime-publication",
         "deployments": deployments,
         "validationAgent": settings.validation.model_dump(),
-        "coordinatorAgent": settings.closeout.model_dump(),
+        "coordinatorAgent": coordinator.model_dump(),
+        "coordinatorOutput": "markdown-and-raw-json" if coordinator_workflow else "raw-json",
         "workflowStates": {"validation": "Disabled", "coordinator": "Disabled"},
         "unattendedVerification": "not-run",
         "manualSteps": "docs/MANUAL_STEPS.md#playground-flow-deployment-checklist",

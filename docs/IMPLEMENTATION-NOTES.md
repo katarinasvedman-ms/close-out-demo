@@ -18,7 +18,8 @@ and adds the secured runtime without renaming resources or weakening authenticat
 Foundation and full-runtime progress/pending deployments are tracked separately.
 Foundation-only completion never claims that agents have been published.
 Azure/Foundry publication and playground preparation precede Fabric grants and
-binding changes. An explicit checkpoint prints both agent versions and allows
+binding changes. An explicit checkpoint prints validation/coordinator/assistant
+versions and allows
 the operator to stop with the Azure setup retained and existing Fabric untouched.
 Publication can pause the selected Azure workflows, but not the Fabric Activator.
 It can update only explicitly selected compatible existing Fabric bindings and
@@ -27,6 +28,15 @@ Ignored installer progress is separate from target-local bootstrap agent pins.
 No-op resume avoids intentional runtime republication/disablement. Final
 enablement is explicit. Connected fresh-target acceptance remains separate;
 focused installer unit checks and owner-confirmed grants do not prove runtime access.
+The installer also publishes the read-only local workbench assistant with a
+separate UserEntraToken connection. No UI hosting is provisioned. The selected
+KQL-backed Data Agent cannot use MI/SPN grounding: Fabric continuation and
+enablement are blocked without explicit coordinator OAuth metadata and a
+Key Vault credential URI. After owner-controlled public-client authorization,
+the opt-in resume validates metadata, requests secret-scoped rotation access,
+publishes the readable coordinator and packages its delegated workflow.
+Structured baseline configs are retained. See the target-specific authentication
+handoff in `DEPLOY-TO-AZURE.md`; no consent or credential exception is inferred.
 For the supported Key Vault networking policy, the installer can merge an
 explicitly policy-owner-approved `SecurityControl=Ignore` tag onto its dedicated
 resource group and retry deployment once. Approval is separate from cost/target

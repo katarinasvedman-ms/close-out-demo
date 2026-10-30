@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string] $OutputDirectory
+    [string] $OutputDirectory,
+    [string] $CoordinatorWorkflow
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,6 +34,13 @@ try {
     Copy-SourceTree 'contracts' (Join-Path $adapter 'contracts')
     Copy-Item -LiteralPath 'src\flow_functions\function_app.py', 'src\flow_functions\host.json' -Destination $adapter
     Copy-SourceTree 'src\logicapps' $workflows
+    if ($CoordinatorWorkflow) {
+        $definition = Get-Content -LiteralPath $CoordinatorWorkflow -Raw | ConvertFrom-Json
+        if (-not $definition.definition.actions.Start_agent_response) {
+            throw 'CoordinatorWorkflow must be a complete coordinator workflow definition.'
+        }
+        Copy-Item -LiteralPath $CoordinatorWorkflow -Destination (Join-Path $workflows 'coordinator\workflow.json')
+    }
     & uv export --frozen --extra agents --extra flow --no-dev --no-emit-project --no-hashes --no-header --format requirements-txt --output-file (Join-Path $adapter 'requirements.txt') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Locked dependency export failed.' }
     Compress-Archive -Path (Join-Path $adapter '*') -DestinationPath (Join-Path $output 'adapter.zip')

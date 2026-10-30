@@ -3,11 +3,19 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidatePattern('^[a-z][a-z0-9-]{1,23}$')]
     [string] $Environment,
-    [switch] $NewAssessment
+    [switch] $NewAssessment,
+    [string] $CoordinatorClientConfig,
+    [string] $CoordinatorCredentialUri
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
+if ([bool]$CoordinatorClientConfig -ne [bool]$CoordinatorCredentialUri) {
+    throw 'Supply both CoordinatorClientConfig and CoordinatorCredentialUri, or neither.'
+}
+if ($CoordinatorClientConfig) {
+    $CoordinatorClientConfig = (Resolve-Path -LiteralPath $CoordinatorClientConfig).Path
+}
 
 function Require-Tool([string] $Name, [string] $Instructions) {
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
@@ -23,6 +31,9 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     Require-Tool 'pwsh' 'Install PowerShell 7: https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows'
     $forward = @('-NoProfile', '-File', $PSCommandPath, '-Environment', $Environment)
     if ($NewAssessment) { $forward += '-NewAssessment' }
+    if ($CoordinatorClientConfig) {
+        $forward += @('-CoordinatorClientConfig', $CoordinatorClientConfig, '-CoordinatorCredentialUri', $CoordinatorCredentialUri)
+    }
     & pwsh @forward
     exit $LASTEXITCODE
 }
@@ -47,6 +58,9 @@ try {
 
     $installerArgs = @('--environment', $Environment)
     if ($NewAssessment) { $installerArgs += '--new-assessment' }
+    if ($CoordinatorClientConfig) {
+        $installerArgs += @('--coordinator-client-config', $CoordinatorClientConfig, '--coordinator-credential-uri', $CoordinatorCredentialUri)
+    }
     & uv run --frozen --extra agents --extra flow python -m agents.installer @installerArgs
     $result = $LASTEXITCODE
 }

@@ -3,14 +3,17 @@
 import argparse
 import fnmatch
 import json
+import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
-from agents import bootstrap, installer_fabric, knowledge_setup
-from agents.definitions import FabricSettings, FoundrySettings
+from agents import assistant, bootstrap, coordinator_brief, installer_fabric, knowledge_setup
+from agents.coordinator_oauth import OWNER, OAuthClient
+from agents.coordinator_workflow import delegated_workflow, readable_workflow
+from agents.definitions import AgentBinding, FabricSettings, FoundrySettings
 from agents.fabric_connection import ensure_connection
 from agents.installer_state import (
     ROOT,
@@ -976,6 +979,159 @@ def stop_coordinator(progress, values, *, fabric=None):
     progress.save()
 
 
+def require_coordinator_auth(progress, values):
+    if not progress.data.get("coordinatorAuth") or not progress.data.get("readableCoordinator"):
+        raise Blocked(
+            "Tenant / Foundry owner",
+            "KQL-backed Fabric Data Agent grounding requires delegated user authentication, "
+            "not project MI or a service principal. Approve delegated automation, register a "
+            "dedicated public OAuth client, and authorize its renewable credential directly "
+            "into a NEW secret in this target's Key Vault. See "
+            "docs/DEPLOY-TO-AZURE.md#coordinator-authentication-handoff. Rerun with "
+            "-CoordinatorClientConfig <nonsecret-client.json> "
+            "-CoordinatorCredentialUri https://<vault>.vault.azure.net/secrets/<secret>. "
+            "Azure agents, inputs and the disabled runtime are retained. "
+            "No Fabric permissions/bindings/schedules will be changed by this continuation.",
+            values["projectEndpoint"],
+        )
+
+
+def prepare_review_agents(progress, values, state, settings):
+    progress.approve(
+        "assistant-delegation",
+        {"project": values["projectResourceId"], "fabric": progress.profile.fabric},
+        "Publish the separate read-only close-out assistant with its own UserEntraToken "
+        "Fabric connection? Document IQ keeps managed identity. This creates no Fabric "
+        "items, credentials, consent grants or UI hosting.",
+    )
+    interactive = assistant.register(
+        settings.endpoint,
+        settings.closeout.name,
+        "close-out-assistant",
+        state / "assistant.json",
+        fabric_connection="close-out-assistant-fabric-user",
+        create_fabric_connection=True,
+    )
+    progress.data["assistant"] = interactive.model_dump()
+    progress.save()
+    authentication = progress.data.get("coordinatorAuth")
+    if not authentication:
+        print(
+            "Coordinator authentication is NOT configured: publishing only the disabled "
+            "baseline runtime. Fabric continuation/enablement will require owner authorization."
+        )
+        return settings.closeout, None
+    client = OAuthClient.model_validate(authentication["client"])
+    uri = authentication["credentialUri"]
+    match = re.fullmatch(r"https://([a-z0-9-]+)\.vault\.azure\.net/secrets/([a-zA-Z0-9-]+)", uri)
+    if not match or client.tenantId != values["tenantId"]:
+        raise Blocked("Operator", "Use an unversioned target Key Vault URI and matching tenant.")
+    vault, secret = match.groups()
+    vault_id = az(
+        "keyvault",
+        "show",
+        "--name",
+        vault,
+        "--resource-group",
+        progress.profile.resourceGroup,
+        "--subscription",
+        progress.profile.subscriptionId,
+        "--query",
+        "id",
+    )
+    secret_id = f"{vault_id}/secrets/{secret}"
+    metadata = az(
+        "rest",
+        "--method",
+        "get",
+        "--url",
+        f"https://management.azure.com{secret_id}?api-version=2023-07-01",
+        "--query",
+        "{tags:tags,enabled:properties.attributes.enabled,contentType:properties.contentType}",
+    )
+    if (
+        metadata.get("enabled") is not True
+        or metadata.get("contentType") != "application/json"
+        or (metadata.get("tags") or {}).get("component") != OWNER
+        or (metadata.get("tags") or {}).get("client-id") != client.clientId
+    ):
+        raise Blocked(
+            "Credential owner",
+            "Restore the enabled, target-owned OAuth credential metadata.",
+            secret_id,
+        )
+    progress.approve(
+        "coordinator-delegation",
+        authentication,
+        f"Approve delegated-user coordinator automation for client {client.clientId}, "
+        f"tenant {client.tenantId} and ONLY credential {uri}? The authorized user needs "
+        "Foundry/Fabric access; tenant policy or revocation can require reauthentication. "
+        "This is not all-managed-identity authentication or an end-to-end verification.",
+    )
+    rotation_role = "b86a8fe4-44ce-4948-aee5-eccb2c155cd7"
+    principal = values["flow"]["workflowPrincipalId"]
+    assignments = az(
+        "role",
+        "assignment",
+        "list",
+        "--scope",
+        secret_id,
+        "--include-inherited",
+        "--query",
+        "[].{principalId:principalId,roleDefinitionId:roleDefinitionId}",
+    )
+    if not any(
+        row["principalId"] == principal and row["roleDefinitionId"].endswith("/" + rotation_role)
+        for row in assignments
+    ):
+        arguments = (
+            "--subscription",
+            progress.profile.subscriptionId,
+            "--resource-group",
+            progress.profile.resourceGroup,
+            "--template-file",
+            str(ROOT / "infra" / "flow" / "coordinator-credential-access.bicep"),
+            "--parameters",
+            f"vaultName={vault}",
+            f"secretName={secret}",
+            f"workflowPrincipalId={principal}",
+        )
+        changes = az(
+            "deployment",
+            "group",
+            "what-if",
+            *arguments,
+            "--query",
+            "changes[].{resourceId:resourceId,changeType:changeType}",
+        )
+        print(json.dumps(changes, indent=2))
+        progress.approve(
+            "coordinator-secret-rotation",
+            {"principal": principal, "scope": secret_id},
+            f"Approve the displayed secret-only Key Vault Secrets Officer assignment to "
+            f"Logic App identity {principal}? No vault-wide access will be created.",
+        )
+        az("deployment", "group", "create", *arguments, "--query", "properties.provisioningState")
+    result = coordinator_brief.register(
+        settings.endpoint,
+        settings.closeout.name,
+        settings.closeout.version,
+        state / "coordinator-brief.json",
+        fabric_connection="close-out-coordinator-fabric-user",
+        create_fabric_connection=True,
+    )
+    binding = AgentBinding.model_validate(result["agent"])
+    source = json.loads((ROOT / "src" / "logicapps" / "coordinator" / "workflow.json").read_text())
+    workflow = readable_workflow(
+        delegated_workflow(source, client, uri, binding.version), binding.version
+    )
+    path = state / "coordinator-workflow.json"
+    atomic_json(path, workflow)
+    progress.data["readableCoordinator"] = binding.model_dump()
+    progress.save()
+    return binding, path
+
+
 def publish(progress, values):
     from azure.ai.projects import AIProjectClient
     from azure.core.exceptions import ResourceNotFoundError
@@ -1055,6 +1211,7 @@ def publish(progress, values):
                         )
             finally:
                 search.close()
+    coordinator, workflow = prepare_review_agents(progress, values, state, settings)
     runtime_hash = digest(
         {
             "source": source_hash(
@@ -1069,12 +1226,14 @@ def publish(progress, values):
                 "src/logicapps/**/*.json",
             ),
             "settings": settings.model_dump(),
+            "coordinator": coordinator.model_dump(),
+            "authentication": progress.data.get("coordinatorAuth"),
         }
     )
     current = app_settings(progress, values)
     pinned = (
-        current.get("FLOW_COORDINATOR_AGENT_VERSION") == settings.closeout.version
-        and current.get("FLOW_COORDINATOR_AGENT_NAME") == settings.closeout.name
+        current.get("FLOW_COORDINATOR_AGENT_VERSION") == coordinator.version
+        and current.get("FLOW_COORDINATOR_AGENT_NAME") == coordinator.name
         and current.get("FLOW_FOUNDRY_PROJECT_ENDPOINT") == settings.endpoint
     )
     adapter = az(
@@ -1118,7 +1277,12 @@ def publish(progress, values):
                 installed = False
     if not installed:
         stop_coordinator(progress, values)
-        bootstrap.publish_flow(values, state)
+        bootstrap.publish_flow(
+            values,
+            state,
+            coordinator=coordinator if workflow else None,
+            coordinator_workflow=workflow,
+        )
         progress.done("runtime", runtime_hash)
     else:
         for app in (values["flow"]["adapterName"], values["flow"]["workflowName"]):
@@ -1139,6 +1303,7 @@ def publish(progress, values):
 
 
 def fabric_permissions(progress, fabric, values):
+    require_coordinator_auth(progress, values)
     profile = progress.profile
     workspace = profile.fabric["workspaceId"]
     sender = values["flow"]["adapterPrincipalId"]
@@ -1167,36 +1332,25 @@ def fabric_permissions(progress, fabric, values):
                 "Azure RBAC does not grant this Fabric role. Then rerun.",
                 workspace,
             ) from error
-    principal = values["projectPrincipalId"]
     agent_id = profile.fabric["dataAgentId"]
     workspace_name = fabric.request("GET", f"/workspaces/{workspace}")["displayName"]
     agent_name = fabric.request("GET", f"/workspaces/{workspace}/items/{agent_id}")["displayName"]
-    identity = az(
-        "ad",
-        "sp",
-        "show",
-        "--id",
-        principal,
-        "--query",
-        "{displayName:displayName,appId:appId}",
-    )
-    app_id = identity["appId"]
-    identity_name = identity.get("displayName") or (
-        f"{values['foundryName']}/projects/{values['projectName']}"
-    )
     instructions = (
-        "MANUAL FABRIC STEP: give the Foundry project Read access to the Data Agent.\n"
+        "MANUAL FABRIC STEP: grant the authorized Entra USER access to the Data Agent.\n"
+        "The selected KQL-backed agent does not support project MI/SPN authentication.\n"
         f"1. In Fabric, open workspace: {workspace_name}\n"
         f"2. Find Data Agent: {agent_name} in the workspace item list.\n"
         "   Open its ... menu > Manage permissions (not the workspace access settings).\n"
         "   Alternative: open the agent > Share > Manage permissions icon; select Advanced "
         "if needed.\n"
         "3. Select Direct access > Add user.\n"
-        "4. Search for and select this exact identity:\n"
-        f"   {identity_name}\n"
-        f"   Object ID: {principal}\n"
+        "4. Select the USER authorized through the coordinator's public OAuth client, "
+        "not its application or the Foundry project managed identity.\n"
         "5. Grant Read only. Leave additional permissions unchecked, turn email notification "
         "off, and select Grant.\n"
+        f"6. The same user needs Viewer on KQL database {profile.fabric['databaseId']} "
+        "and permission to invoke the selected Foundry agent/model. The interactive "
+        "assistant's signed-in Azure CLI user needs those permissions separately.\n"
         "If sharing/permission controls are unavailable, ask the Data Agent owner to perform "
         "this step. Do not grant workspace-wide access as a substitute.\n"
         f"Workspace ID: {workspace}\n"
@@ -1211,50 +1365,15 @@ def fabric_permissions(progress, fabric, values):
         encoding="utf-8",
     )
     progress.approve(
-        "data-agent-read",
-        {"principal": principal, "agent": agent_id, "workspace": workspace, "permission": "Read"},
+        "delegated-data-agent-read",
+        {
+            "authentication": progress.data["coordinatorAuth"],
+            "agent": agent_id,
+            "workspace": workspace,
+            "database": profile.fabric["databaseId"],
+        },
         instructions,
     )
-    from agents.fabric_setup import FabricSetup
-
-    database = fabric.request(
-        "GET", f"/workspaces/{workspace}/kqlDatabases/{profile.fabric['databaseId']}"
-    )
-    database_name = (
-        database.get("properties", {}).get("databaseName") or profile.fabric["databaseId"]
-    )
-    client = FabricSetup(fabric.credential, profile.fabric, progress.directory)
-    quoted_name = database_name.replace("'", "''")
-    try:
-        rows = client.kql(f".show database ['{quoted_name}'] principals", write=True)
-        if not any(
-            (row.get("PrincipalObjectId") == principal or app_id in row.get("PrincipalFQN", ""))
-            and row.get("Role") in {"Database Viewer", "Database User", "Database Admin"}
-            for row in rows
-        ):
-            progress.approve(
-                "database-viewer",
-                {"principal": principal, "database": profile.fabric["databaseId"]},
-                f"Grant Foundry project identity {principal} (application {app_id}) Viewer "
-                f"on ONLY KQL database {database_name}? Existing grants will be preserved.",
-            )
-            client.kql(
-                f".add database ['{quoted_name}'] viewers "
-                f"('aadapp={UUID(app_id)};{UUID(profile.tenantId)}')",
-                write=True,
-            )
-    except Blocked:
-        raise
-    except Exception as error:
-        raise Blocked(
-            "Fabric database administrator",
-            f"Grant project identity {principal} Viewer on database {database_name}. "
-            f"Use: .add database ['{quoted_name}'] viewers "
-            f"('aadapp={app_id};{profile.tenantId}'). Never use .set. Then rerun.",
-            profile.fabric["databaseId"],
-        ) from error
-    finally:
-        client.client.close()
     scope = values["flow"]["storageUrl"].split("//", 1)[1].split(".", 1)[0]
     storage_id = az(
         "storage",
@@ -1427,6 +1546,8 @@ def prepare_playground(progress, values, state):
 def enable(progress, fabric, values, settings):
     from agents.flow_callback import restricted_auth
 
+    require_coordinator_auth(progress, values)
+    coordinator = AgentBinding.model_validate(progress.data["readableCoordinator"])
     profile = progress.profile
     workflow_id = (
         f"/subscriptions/{profile.subscriptionId}/resourceGroups/{profile.resourceGroup}"
@@ -1472,8 +1593,8 @@ def enable(progress, fabric, values, settings):
         return
     if not confirm(
         f"Setup is prepared for {values['foundryName']} and Fabric workspace "
-        f"{profile.fabric['workspaceId']}. Enable coordinator {settings.closeout.name}:"
-        f"{settings.closeout.version}, the selected readiness Activator and approved bounded "
+        f"{profile.fabric['workspaceId']}. Enable coordinator {coordinator.name}:"
+        f"{coordinator.version}, the selected readiness Activator and approved bounded "
         "notebook schedule? Scheduled work incurs charges. Blob validation stays disabled. "
         "No inference or end-to-end verification is being performed by this installer."
     ):
@@ -1593,27 +1714,64 @@ def enable(progress, fabric, values, settings):
         raise
 
 
-def playground_handoff(values, settings, output):
+def playground_handoff(values, settings, output, *, progress=None):
     portal = (
         f"https://ai.azure.com/nextgen/r/{values['projectResourceId'].lstrip('/')}/build/agents"
     )
+    coordinator = settings.closeout
+    extra = ""
+    if progress is not None:
+        if progress.data.get("coordinatorAuth"):
+            coordinator = AgentBinding.model_validate(progress.data["readableCoordinator"])
+        interactive = progress.data["assistant"]["agent"]
+        state = ROOT / ".local" / "fresh" / values["subscriptionId"] / values["foundryName"]
+        extra = (
+            f"Read-only assistant: {interactive['name']}, version {interactive['version']}\n"
+            f"Local assistant configuration: {state / 'assistant.json'}\n"
+            "UI is LOCAL ONLY; see README.md#local-close-out-workbench for startup.\n"
+            + (
+                "Coordinator output: readable .md plus diagnostic .json in private "
+                f"{values['flow']['storageUrl'].rstrip('/')}/results/coordinator/.\n"
+                if progress.data.get("coordinatorAuth")
+                else "Coordinator authentication is pending; runtime stays disabled.\n"
+            )
+        )
     return (
         f"Open Foundry project agents: {portal}\n"
         f"Validation agent: {settings.validation.name}, version {settings.validation.version}\n"
-        f"Coordinator agent: {settings.closeout.name}, version {settings.closeout.version}\n"
-        f"Select {settings.validation.name}, version {settings.validation.version}, "
+        f"Coordinator agent: {coordinator.name}, version {coordinator.version}\n"
+        + extra
+        + f"Select {settings.validation.name}, version {settings.validation.version}, "
         "then open its playground.\n"
         f"Attach: {output / 'PHOTO-20.png'}\n"
         f"Paste the contents of: {output / 'message.json'}\n"
     )
 
 
-def install(progress, *, new_assessment=False):
+def install(
+    progress, *, new_assessment=False, coordinator_client=None, coordinator_credential_uri=None
+):
     from azure.identity import AzureCliCredential
 
     allow_database_correction = installer_fabric.can_correct_database(progress)
     progress.phase("Selecting the Azure target")
     choose_target(progress)
+    if coordinator_client is not None:
+        client = OAuthClient.model_validate_json(coordinator_client.read_text(encoding="utf-8"))
+        if client.tenantId != progress.profile.tenantId or not re.fullmatch(
+            r"https://[a-z0-9-]+\.vault\.azure\.net/secrets/[a-zA-Z0-9-]+",
+            coordinator_credential_uri or "",
+        ):
+            raise Blocked(
+                "Operator", "Use an unversioned target Key Vault URI and matching tenant."
+            )
+        authentication = {
+            "client": client.model_dump(),
+            "credentialUri": coordinator_credential_uri,
+        }
+        progress.bind("coordinatorAuthTarget", authentication)
+        progress.data["coordinatorAuth"] = authentication
+        progress.save()
     progress.bind(
         "azureTarget",
         {
@@ -1628,7 +1786,7 @@ def install(progress, *, new_assessment=False):
     print(
         "\nAzure/Foundry foundation prepared: "
         f"{foundation['projectEndpoint']}\n"
-        "This is infrastructure only; the two agents are not yet published by this phase. "
+        "This is infrastructure only; the agents are not yet published by this phase. "
         "Next, prepare API/callback registrations and select existing Fabric tool settings."
     )
     progress.phase("Preparing application registrations without secrets")
@@ -1677,7 +1835,7 @@ def install(progress, *, new_assessment=False):
             message = (
                 "Azure and Foundry setup prepared. Fabric permissions, bindings and schedules "
                 "have not been changed in this phase.\n\n"
-                + playground_handoff(values, settings, output)
+                + playground_handoff(values, settings, output, progress=progress)
                 + "\nDo not send the playground message until Fabric setup and runtime "
                 "enablement are completed. No inference or end-to-end verification has "
                 "been performed.\n"
@@ -1691,6 +1849,7 @@ def install(progress, *, new_assessment=False):
             ):
                 progress.phase("Azure and Foundry prepared; Fabric setup deferred")
                 return
+            require_coordinator_auth(progress, values)
             progress.phase("Preparing target-specific Fabric identity grants")
             fabric_permissions(progress, fabric, values)
             progress.phase("Binding the existing Fabric items")
@@ -1715,10 +1874,11 @@ def install(progress, *, new_assessment=False):
             fabric.close()
     message = (
         "Installation prepared; live end-to-end verification is deferred.\n\n"
-        + playground_handoff(values, settings, output)
+        + playground_handoff(values, settings, output, progress=progress)
         + f"Projector schedule ends: {progress.data['scheduleEndsAt']}\n"
         "Send once. Retry unchanged input with the same publication ID.\n"
-        "This demo saves a raw coordinator response, not an approved package or Dataverse update.\n"
+        "This demo saves a readable draft and raw response, not an approved package or "
+        "Dataverse update.\n"
         "Resume setup with: .\\scripts\\deploy-demo.ps1 "
         f"-Environment {progress.profile.environment}\n"
     )
@@ -1730,7 +1890,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment", required=True)
     parser.add_argument("--new-assessment", action="store_true")
+    parser.add_argument("--coordinator-client-config", type=Path)
+    parser.add_argument("--coordinator-credential-uri")
     args = parser.parse_args()
+    if bool(args.coordinator_client_config) != bool(args.coordinator_credential_uri):
+        parser.error("Supply both coordinator client configuration and credential URI")
     try:
         progress = Progress(args.environment)
     except Blocked as error:
@@ -1745,7 +1909,12 @@ def main():
         raise SystemExit(2) from None
     try:
         with progress.lock():
-            install(progress, new_assessment=args.new_assessment)
+            install(
+                progress,
+                new_assessment=args.new_assessment,
+                coordinator_client=args.coordinator_client_config,
+                coordinator_credential_uri=args.coordinator_credential_uri,
+            )
     except Blocked as error:
         progress.handoff(error)
         raise SystemExit(2) from None
