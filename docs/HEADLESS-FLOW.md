@@ -13,6 +13,7 @@ Foundry playground: close-out-validation (actual photo and its registered contex
   -> direct Foundry Responses API: close-out-coordinator
        -> native Fabric Data Agent and document IQ
   -> Logic App saves the completed, unmodified response JSON to Blob
+       -> opt-in readable coordinator also saves its Markdown review brief
 ```
 
 The downstream agent is **close-out-coordinator**, not close-out-validation.
@@ -28,12 +29,14 @@ cancelled, incomplete and timed-out responses fail the workflow rather than
 appearing as successful draft output. The initial POST is not automatically
 retried, so a response timeout cannot silently start a second agent invocation.
 
-The Blob is the **raw Foundry response**, including its final assistant output,
+The `.json` Blob is the **raw Foundry response**, including its final assistant output,
 response ID and any returned tool records. It is not a contract-validated
 GapAnalysis, an approval, or a compiled package. The workflow does not query
 Kusto, recalculate readiness, inspect citations or reject a completed response
 because of Fabric provenance. Existing Python verification remains available
-only as a separate diagnostic path.
+only as a separate diagnostic path for this original capture-only mode. The
+opt-in readable mode below adds publication guards and a separate `.md` document;
+it does not change the default structured clients or make the raw trace readable.
 
 Results use the private `results` container, under
 `coordinator/<runId>/<caseId>/<readiness>/<transitionId>/<workflowRunId>.json`.
@@ -41,17 +44,185 @@ Blob metadata also carries case, test-run and workflow-run IDs. A manual replay
 creates a new workflow invocation and separate result; this capture-only path
 does not claim exactly-once agent execution or write any system of record.
 
+### Employee workbench boundary
+
+The Presenter is an employee-facing workbench, not an infrastructure dashboard.
+It uses **Photo received -> Evidence checked -> Result submitted** and explains
+the user's next review action against approved requirements. It stops at the
+assessment and confirmed publication; no downstream readiness or coordinator
+completion is implied. Infrastructure names, model versions, hashes, event IDs
+and diagnostic receipts are kept out of the workflow UI. Technical failures are
+logged, while the UI gives explicit plain-language recovery guidance. Foundry
+traces, Logic App runs and the raw coordinator response in Blob are shown
+separately by the presenter. Demo labels remain visible, and the case overview
+is explicitly illustrative and not updated by photo checks.
+
+The local assistant renders Markdown and numbered document citations. Clicking
+a citation opens the matching document IQ excerpt from that response's retained
+tool receipt, not a new inference or a public Blob download. Duplicate references
+share a source; original private-document links still require separate access.
+Citation previews do not independently verify claims or turn document references
+into Fabric evidence. `/api/presenter/response` can restore a retained answer's
+source metadata only after the same selected-fixture scope checks as live chat.
+Each answer links to a labelled saved-answer view (`siteId` and `responseId`
+query parameters). Reopening it does not refresh its facts or the fixture case
+cards, and does not invoke Foundry.
+
+### Readable coordinator briefs
+
+The employee deliverable is a **Markdown close-out review brief**, at the gap
+review/rework recommendation stage, not the final acceptance package. It
+summarizes the recorded blockers, evidence, open questions, role-specific next
+steps and approval boundary. An azimuth difference is not an invented tolerance
+failure or an instruction to realign equipment: the approved requirement must
+be available or the brief explicitly asks for verification.
+
+`agents.coordinator_brief` publishes a new immutable version of an explicitly
+selected coordinator, reusing only its native document/Fabric read tools and
+existing model. The response format is plain text, not the old strict
+`gaps`/`proposedRework` JSON schema. The prompt requires one Markdown document.
+Prior versions and the default `GapDraft` clients remain unchanged:
+
+```powershell
+uv run --frozen --extra agents python -m agents.coordinator_brief `
+  --endpoint "<existing-project-endpoint>" --agent-name close-out-coordinator `
+  --source-version "<known-working-native-version>" `
+  --output .local\foundry\coordinator-brief.json
+```
+
+Render the already approved delegated workflow with `agents.coordinator_workflow
+--readable-brief` and the **new** explicit agent version, then validate/package/
+deploy it following [the manual procedure](MANUAL_STEPS.md#readable-coordinator-brief-publication).
+Do not replace an actual live ZIP with repository defaults. This is opt-in;
+fresh portal/bootstrap publication is not migrated by this command.
+
+The workflow retains the raw `.json` sidecar, then requires successful native
+receipts from both sources, no failed tool calls, the exact full immutable
+sourceRef/site/case/program in the Fabric receipt, one final text message, the
+required document headings and every callback `readinessMissing` ID in the brief.
+Missing/conflicting evidence or an unavailable/empty/JSON-shaped answer must not
+become a published brief. Failed guards fail the workflow and retain the raw
+response for diagnosis. These checks are **not independent verification of every
+claim, measurement, citation or requirement** and do not compute readiness.
+
+The readable file is adjacent to the trace:
+`results/coordinator/<runId>/<caseId>/<readiness>/<transitionId>/<workflowRunId>.md`,
+with content type `text/markdown; charset=utf-8` and create-only publication.
+Metadata pins site, case, program, readiness, sourceRef/revision, response,
+agent version and workflow run. Blob remains private; no SAS/public access or
+arbitrary URL proxy is added.
+
+The workbench's **Close-out briefs** section lists and reads these files for the
+selected configured site/case/program. Refreshing or opening a saved brief does
+not invoke an agent. The API defaults to the registered validation target's
+`storageUrl`; `--briefs-storage-url "<existing-blob-endpoint>"` selects a different
+explicit account when starting `agents.workbench`. The Azure CLI operator needs
+existing read/list access to `results`. Unconfigured storage and read errors are
+reported as unavailable, not an empty success or a seed-generated brief.
+Readers reject raw JSON, other cases, arbitrary paths/URLs, probe prefixes,
+inconsistent metadata and oversized files. Markdown renders without HTML,
+remote images or unsafe links. Original document links still require access.
+
+Briefs refer to a particular test-evidence revision and can exclude newer photo
+checks. They do not update the illustrative case cards, create Dataverse records,
+approve/issue rework, compile/submit a package or grant customer acceptance.
+The brief is coordination guidance, not a physical work instruction: an
+unverified tolerance cannot establish an RFDS breach or justify a recommendation
+to adjust an antenna. Supported corrective-work proposals go to the Construction
+Manager for review; the Coordinator obtains ticket-owner confirmation rather
+than assuming ticket-closure authority.
+
+### Coordinator Fabric authentication gate
+
+The original project-managed-identity connection is **not an accepted
+unattended Fabric path**. [Fabric's documented limitations](https://learn.microsoft.com/en-us/fabric/data-science/data-agent-service-principal#limitations)
+exclude managed identities for Data Agent authentication and service-principal
+authentication for KQL-backed Data Agents. On the selected test target, the
+project identity already has KQL database Viewer; repeating that grant or
+broadening workspace access does not resolve this support boundary.
+
+The direct workflow has reached Foundry and saved a completed response, but its
+Fabric tool returned an internal Kusto error and the final draft contained empty
+gaps. That is not evidence that the site has no gaps or that unattended grounding
+works. The exact internal service error has not been independently diagnosed.
+
+The separate workbench assistant succeeds with the operator's `UserEntraToken`
+connection. It does not authorize the Logic App's managed-identity caller.
+[Foundry OAuth sessions](https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/mcp-authentication#oauth-identity-passthrough)
+are partitioned by caller and connection; an operator's consent must not be
+assumed to carry over to unattended calls.
+
+An isolated automatic-path probe used a user-authorized
+[HTTP with Microsoft Entra ID connector](https://learn.microsoft.com/en-us/connectors/webcontentsv2/)
+for Logic Apps-to-Foundry. After explicit user approval, a separate `V2`
+connection and a connection access policy for the existing workflow identity
+were deployed. Authentication failed with **AADSTS65002**: the Microsoft-owned
+connector application is not preauthorized for the Microsoft-owned Foundry
+resource. The return page also failed DNS resolution, obscuring the upstream
+Entra error. Changing browsers does not fix that error. The diagnostic connection
+was never authenticated or wired into the live workflow and has been removed.
+
+**Verified existing-target exception, 30 October 2026:** after explicit approval,
+a dedicated single-tenant public OAuth client was registered and interactively
+authorized for `https://ai.azure.com/user_impersonation`. Its renewable user
+credential is held in Key Vault, not a local token file or app setting. The Logic
+App identity reads only that secret, refreshes the user token, persists its rotated
+credential before inference, and uses the genuine user bearer token for Foundry
+creation and polling. Blob output still uses managed identity. No password,
+client secret, coordinator Function or local fact injection was added.
+
+The verified structured baseline pinned **close-out-coordinator:17** and the separate native
+Fabric connection **close-out-coordinator-fabric-user**, using
+[`UserEntraToken`](https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/tools/fabric-iq#authentication-and-security).
+Document IQ and the interactive assistant are unchanged. An isolated scheduled
+workflow first proved unattended renewal, native retrieval and Blob capture.
+The existing Fabric dispatch then exercised the promoted callback: response
+`resp_0a509f18bb5f8243006ae49cc2a5648196b065026028f8f304` was saved under
+`coordinator/e58da55b-e78a-4f80-ac59-48aaaa68071e/00000000-0000-4000-8000-000000000042/Blocked/2cff324b-cdc1-bdf2-b19b-c78801083dd6/08584082396551117569513007103CU00.json`.
+Its native Fabric receipt contains the exact immutable revision/sourceRef; the
+draft identifies CHK-A-GROUNDING, CHK-A-AZ-B and PL-0042-01 and cites the latest
+uploaded PHOTO-20 assessment, not its superseded seed validation. The prompt asks
+Fabric for latest fact records, not another agent's proposed gap analysis.
+These are synthetic live-test facts, not production readiness or an approval.
+
+`agents.coordinator_workflow` renders this **opt-in** exception around an existing
+direct workflow; the default deployment/bootstrap still publishes the original
+MI path and must not be presented as working KQL-backed unattended grounding.
+The renderer serializes runs and uses asynchronous HTTP acknowledgement, which
+is required when a Request trigger has concurrency control. Credential HTTP
+actions secure both inputs/outputs; ParseJson supports secured inputs only and
+automatically hides its parsing output. Azure's WDL validation rejected explicit
+ParseJson secure outputs and concurrency without asynchronous acknowledgement.
+Validate the rendered definition before deploying the complete workflow ZIP:
+a file's presence or a Healthy artifact listing alone did not catch these errors.
+The isolated probe uses an atomic Blob claim to prevent repeat inference and has
+been removed from the live host.
+
+This is **delegated-user automation**, not app-only or all-MI delivery. The
+successful runs reused and rotated the credential without a per-run sign-in;
+tenant policy or revocation can still require another interactive authorization.
+No uninterrupted week-long token validity is promised. Do not copy access
+tokens into clear-text settings, spoof a user header, weaken ingress, inject
+diagnostic KQL facts, or substitute empty gaps on failure.
+
 ### Direct workflow configuration and identities
 
 - `FLOW_FOUNDRY_PROJECT_ENDPOINT`: selected project endpoint, without a trailing slash.
 - `FLOW_COORDINATOR_AGENT_NAME` and `FLOW_COORDINATOR_AGENT_VERSION`: explicit published agent binding.
 - `FLOW_STORAGE_URL`: evidence Storage Blob endpoint, with its trailing slash.
-- Logic App system identity: project-scoped **Foundry User**, and **Storage Blob
-  Data Contributor** scoped only to the `results` container for output.
-- Foundry-to-Fabric native tool: **Project Managed Identity**, audience
-  `https://api.fabric.microsoft.com`. Grant the selected project identity Read
-  on the published Data Agent and database Viewer on its KQL source. These are
-  Fabric permissions, not Azure subscription RBAC.
+- Default template Logic App identity: project-scoped **Foundry User**, and
+  **Storage Blob Data Contributor** scoped only to the `results` container.
+- Approved delegated exception: the operator needs Foundry/Fabric data access;
+  the Logic App identity receives **Key Vault Secrets Officer scoped to the one
+  new credential secret**, through `infra/flow/coordinator-credential-access.bicep`,
+  for read/rotation. No vault-wide grant. Blob output retains its existing MI role.
+- Default bootstrap Fabric tool: **Project Managed Identity**, audience
+  `https://api.fabric.microsoft.com`, blocked by the gate above for this KQL source.
+  The existing-target delegated connection instead uses audience
+  `https://analysis.windows.net/powerbi/api` and scope
+  `https://analysis.windows.net/powerbi/api/DataAgent.Execute.All`. Data Agent Read and KQL database
+  Viewer are Fabric permissions, not Azure subscription RBAC, and do not by
+  themselves establish a supported authentication path.
 - Foundry-to-publisher: the project identity is explicitly allowed by publisher
   Easy Auth and its route-specific allowlist. The publisher's own identity sends
   to the existing Eventstream; its selected-workspace Contributor requirement

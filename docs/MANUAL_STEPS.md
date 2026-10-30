@@ -17,14 +17,14 @@ workspace-identity credential. Do not silently substitute credentials.
 |---|---|
 | Validation agent -> publisher | Foundry project MI. Bicep allows that exact object ID in Easy Auth and the publisher route; bootstrap attaches the native OpenAPI tool with the API audience. |
 | Publisher -> Fabric Eventstream | Function MI. Fabric owner must explicitly approve/grant Contributor in the selected workspace; Azure RBAC does not grant this Fabric role. |
-| Logic App -> coordinator/Blob | Logic App MI; project Foundry User and results-container Blob Contributor are in Bicep. No coordinator Function. |
-| Coordinator -> Fabric/IQ | Foundry project MI, not Logic App MI. Native project connections are published; Fabric item/database grants below are manual. |
+| Logic App -> coordinator/Blob | Default template uses MI and retains the KQL authentication gate. The approved existing-target exception refreshes a Key Vault-held user credential for Foundry; Blob output remains MI. No coordinator Function. |
+| Coordinator -> Fabric/IQ | Existing-target Fabric uses a separate UserEntraToken connection; document IQ remains project MI. Default bootstrap still publishes project-MI connections, which do not establish supported KQL-backed Data Agent authentication. |
 | Fabric dispatch -> Logic App | Current Web/REST connector lacks WorkspaceIdentity; the existing target uses a separately approved service-principal credential. Not MI. |
 | Fabric readiness notebook | Existing test schedule executes with its owner's delegated Storage/Kusto tokens. Not workspace MI; its owner needs target-ledger read access. |
 | Azure Files host storage | Host Storage key kept in Key Vault; a user-assigned MI reads that secret. The Files connection itself is not MI. Evidence/document storage remains keyless. |
 
 **If strict MI-only authentication is required, stop here.** There is no portal
-setting that fixes the unsupported callback or makes the current delegated
+setting that fixes the KQL-backed Data Agent/callback support boundaries or makes the current delegated
 projector/Files connection MI. Obtain a supported replacement design or explicit
 target-owner exceptions before provisioning. The prior development exceptions
 do not authorize a new target. No secret is created by bootstrap.
@@ -248,6 +248,195 @@ uv run --frozen --extra agents python -m agents.knowledge_setup --infra .local\f
 Expected state is `Enabled`, `false`, `false`, followed by successful authenticated
 uploads and verified canonical artifact/site/version text in the shared native
 Blob source's generated index.
+
+## Interactive workbench Fabric delegation
+
+The local assistant uses the signed-in Azure CLI operator with a separate
+`UserEntraToken` connection. The source coordinator's project-managed-identity
+connection remains unchanged. This distinction is required because a Logic Apps
+managed-identity invocation does not carry the user context needed for delegation.
+
+The operator must already have Foundry project connection/agent management
+permissions and access to the published Fabric Data Agent and its underlying
+data. Fabric capacity must be active. This does not grant those permissions or
+prove browser-user isolation.
+
+1. Run `agents.assistant` with the existing project endpoint,
+   `--fabric-connection <separate-name>` and `--create-fabric-connection`, as shown
+   in the [workbench instructions](../README.md#local-close-out-workbench).
+   Creation is conditional on absence; an existing mismatch fails without mutation.
+2. Restart `agents.workbench` to load the newly pinned assistant version.
+3. Ask why the Stockholm fixture is blocked. Inspect the ignored
+   `.local\workbench\<response-id>.json`: require both native sources, all four
+   scope values in the Fabric `userQuestion`, the exact current fixture
+   `sourceRef` including its hash, PHOTO-19, PHOTO-20 and PL-0042-01. Compare the
+   reference and readiness against the actual `CloseoutContractFactsV01` row;
+   never inject the comparison snapshot into the agent.
+4. If the service requires consent, follow the tenant-approved delegated-consent
+   process for `https://analysis.windows.net/powerbi/api/DataAgent.Execute.All`.
+   Do not grant consent automatically, add secrets, switch the coordinator's
+   connection or substitute local seed facts.
+
+The connection uses audience `https://analysis.windows.net/powerbi/api` and the
+scope above. This is the documented
+[incoming-user delegation](https://learn.microsoft.com/azure/foundry/agents/how-to/configure-user-delegation),
+not a new custom OAuth application or an unattended authentication workaround.
+
+## Approved automatic coordinator delegation
+
+Reason: the selected KQL-backed Fabric Data Agent does not support project MI
+or service-principal authentication. This is an explicitly approved
+**existing-target demo exception**, not part of portal/bootstrap deployment.
+The verified structured baseline pins coordinator version 17, its separate
+`close-out-coordinator-fabric-user` connection, and the current native document
+IQ connection. The assistant, original MI connection and Fabric items are
+unchanged. See the [actual proof](HEADLESS-FLOW.md#coordinator-fabric-authentication-gate).
+
+Before preparing another credential, obtain approval for delegated-user
+automation. The operator must have actual Foundry/Fabric access, Entra app
+registration permission and the required Key Vault management permission.
+The structured coordinator uses `closeout-fabric.txt`; the optional readable
+coordinator uses `closeout-brief.txt`. Both require
+native document IQ and a separate UserEntraToken Fabric connection with audience
+`https://analysis.windows.net/powerbi/api` and delegated scope
+`https://analysis.windows.net/powerbi/api/DataAgent.Execute.All`. The guarded
+connection reconciler is `agents.assistant.reconcile_delegated_connection`;
+it never converts the original connection or overwrites a different target.
+Agent/connection publication is a prerequisite, not something the workflow
+renderer or default bootstrap silently performs.
+
+1. Register/reconcile a dedicated single-tenant public client. The helper
+   discovers the Foundry resource's enabled `user_impersonation` scope and
+   refuses unrelated apps or applications with passwords/key credentials:
+
+   ```powershell
+   uv run --frozen --extra agents python -m agents.coordinator_oauth register --name "<approved-app-name>" --tenant "<tenant-id>" --create --output .local\coordinator-oauth\client.json
+   ```
+
+2. Authorize interactively with the operator who has the required data access.
+   The helper uses native loopback/PKCE, keeps its token cache in memory and
+   writes `{tenantId, clientId, refreshToken}` directly into a **new** Key Vault
+   secret. It never writes a local token file or creates a client secret:
+
+   ```powershell
+   uv run --frozen --extra agents python -m agents.coordinator_oauth sign-in --config .local\coordinator-oauth\client.json --vault-resource-id "<vault-arm-id>" --secret-name "<new-secret-name>"
+   ```
+
+   An existing secret is deliberately not overwritten. Do not retry sign-in
+   simply to check whether a working credential exists.
+
+3. Review a what-if, then deploy `infra\flow\coordinator-credential-access.bicep`
+   to the existing group with `vaultName`, `secretName` and the existing
+   `workflowPrincipalId`. Expect **one Key Vault Secrets Officer assignment on
+   that secret only**, allowing MI read/rotation. No vault-wide role, new Fabric
+   permission or ingress-policy change is required.
+4. Render the exception with an explicit published version:
+
+   ```powershell
+   uv run --frozen --extra agents python -m agents.coordinator_workflow --source src\logicapps\coordinator\workflow.json --client-config .local\coordinator-oauth\client.json --credential-uri "https://<vault>.vault.azure.net/secrets/<new-secret-name>" --agent-version "<verified-version>" --output .local\coordinator-oauth\workflow.json
+   ```
+
+   Preserve and back up the actual live package. Replace only
+   `coordinator\workflow.json` in a staging copy; retain its other workflows
+   and configuration. Validate the WDL definition before deploying the complete
+   ZIP. Azure's non-provisioning [workflow validator](https://learn.microsoft.com/en-us/rest/api/logic/workflows/validate?view=rest-logic-2016-06-01)
+   can check a diagnostic copy with nonsecret `appsetting()` references resolved.
+   ParseJson supports secured inputs, not an explicit secure-outputs flag;
+   Request concurrency also requires an asynchronous Response. Both invalid
+   settings caused runtime 404s despite a Healthy artifact listing. ZIP success
+   or artifact health alone is not workflow acceptance.
+5. Run the existing Fabric dispatch once for an actual immutable test snapshot;
+   no new Fabric item is needed. Wait for its **new** response Blob. Require
+   successful inner Fabric/document tool results, the exact sourceRef/hash and
+   current validation IDs, and all/only Fabric's readinessMissing conditions.
+   A completed response, an empty draft or a green Fabric HTTP action alone is
+   insufficient. Confirm that the credential's secret version changed using
+   metadata only; never print its value. Do not redispatch an unknown outcome.
+
+For an isolated scheduled proof, the renderer also accepts `--probe-input` with
+a contract-valid callback and `--probe-start-time` in UTC. Its atomic Blob claim
+allows only one inference even when the timer ticks again. Disable/remove the
+probe before promoting the credential to the real coordinator. It does not
+replay the complete Activator/projector chain or prove its week-long schedule.
+
+For an observed live result, download it with your existing Blob permission and
+inspect it locally; never make the container public:
+
+```powershell
+az storage blob download --auth-mode login --account-name "<storage>" --container-name results --name "<new-result-blob>" --file .local\coordinator-oauth\response.json --only-show-errors
+$response = Get-Content .local\coordinator-oauth\response.json -Raw | ConvertFrom-Json
+$calls = @($response.output | Where-Object type -eq 'mcp_call')
+if ($response.status -ne 'completed' -or $response.error) { throw 'Response failed' }
+foreach ($label in @('fabric-facts', 'documents')) {
+    $receipt = @($calls | Where-Object server_label -eq $label)
+    if (!$receipt.Count -or @($receipt | Where-Object { $_.status -ne 'completed' -or $_.error }).Count) {
+        throw "Required native retrieval failed: $label"
+    }
+}
+```
+
+Also compare the Fabric receipt's full sourceRef and draft's conditions/latest
+validation IDs against the **independently queried actual snapshot**. That query
+is a diagnostic, not model input. This original workflow mode remains raw-response
+capture only; the readable mode below adds separate publication guards.
+The successful existing-target receipt is recorded in
+`HEADLESS-FLOW.md`; it proved renewal and native retrieval without another sign-in.
+
+Tenant policy, revocation or loss of the operator's data access can require
+reauthorization. Sign in into a newly named secret, review its scoped grant,
+re-render/redeploy the URI, and retire the old credential under the target's
+retention policy. Fail visibly on renewal errors; never substitute MI, a seed
+answer, an access token in settings, or a spoofed user header. A week of
+uninterrupted delegated access has not been guaranteed.
+
+## Readable coordinator brief publication
+
+Reason: the employee-facing deliverable is a review/rework recommendation, not
+the entire Responses API JSON. This is an opt-in change to an already authorized
+native coordinator flow. It does not provision Fabric, replace credentials or
+change approval responsibilities.
+
+1. Retain the current pinned agent version and export/back up the actual live
+   Logic Apps ZIP. Check for concurrent deployments. Publish the new readable
+   version with `agents.coordinator_brief`, explicitly selecting that working
+   native source version (see [the command](HEADLESS-FLOW.md#readable-coordinator-briefs)).
+   Verify the active version's read-back, native tools and plain-text response
+   format. Do not remove the old version or change structured client bindings.
+2. Render the workflow using the previously approved OAuth client/secret URI:
+
+   ```powershell
+   uv run --frozen --extra agents python -m agents.coordinator_workflow `
+     --source "<exported-current-coordinator-workflow.json>" `
+     --client-config .local\coordinator-oauth\client.json `
+     --credential-uri "https://<vault>.vault.azure.net/secrets/<approved-secret>" `
+     --agent-version "<new-readable-version>" --readable-brief `
+     --output .local\coordinator-oauth\readable-workflow.json
+   ```
+
+   Validate the WDL with the non-provisioning validator described above. In a
+   copy of the actual live package, replace only `coordinator\workflow.json`.
+   Preserve validation, connections, host configuration and ingress settings.
+   Refuse deployment if the live package changed underneath the prepared copy.
+3. Use one existing dispatch for a real immutable test revision, not locally
+   injected facts. Retain its job/response identity before waiting; do not
+   blindly redispatch if the outcome is unknown. Require a **new `.md` Blob**
+   beside its raw `.json`, not only a green HTTP activity or completed model.
+   Read the actual Markdown: check all/only authoritative blockers, latest
+   assessments, approved requirements versus unverified tolerances, both native
+   sources, role-specific recommendations and no claims of authorized action.
+   A failed publication guard retains the raw trace but publishes no brief.
+4. Restart `agents.workbench`; its existing validation configuration supplies
+   the account, or use `--briefs-storage-url "<existing-blob-endpoint>"`.
+   With the same already-authorized operator, verify
+   `/api/presenter/briefs?siteId=<site>` and the selected-site reader. Refresh
+   **Close-out briefs**, open the new document, then switch sites and verify
+   isolation. Private source links require their original permissions.
+
+For rollback, restore the backed-up live package and its previous pinned
+coordinator version. Do not alter the validator, assistant, OAuth grants or
+Fabric items. The default bootstrap still publishes its original path; readable
+publication is not fresh-target acceptance or proof of a continuous Activator
+schedule, arbitrary-upload integration, approvals or package generation.
 
 ## Historical delegated external Fabric test connection
 
@@ -503,7 +692,12 @@ and the removed coordinator Function hop. The Logic App directly starts/polls
 the pinned Foundry agent and saves the completed raw response; it does not
 perform independent Fabric or citation validation.
 
-For each new target, the Fabric owner must give the **Foundry project** managed
+The following describes the **default bootstrap configuration**, not proof of
+supported KQL authentication. The existing target instead uses the approved
+delegated exception above; successful direct-MI transport previously hid an
+inner Kusto error.
+
+For the default configuration, the Fabric owner must give the **Foundry project** managed
 identity direct **Read** access to the published Data Agent: item **Manage
 permissions -> Direct access -> Add user**. Select the exact project identity,
 leave additional permissions unchecked and disable email notification.
@@ -512,9 +706,10 @@ Do not grant workspace-wide Contributor as a substitute for these read grants.
 The supported public interfaces checked do not expose Data Agent item-only
 sharing writes, so this remains an explicit owner-operated step.
 
-The connection must use `ProjectManagedIdentity`, with audience
+Default bootstrap validates `ProjectManagedIdentity`, with audience
 `https://api.fabric.microsoft.com`. This is not the Logic App or publisher
-identity. The Logic App instead needs project-scoped Foundry User and Blob Data
+identity. Those grants do not overcome the KQL Data Agent authentication
+limitation. The default Logic App also needs project-scoped Foundry User and Blob Data
 Contributor on `results`; both are declared in `infra/flow`.
 
 Read-only verification: inspect the Data Agent's Direct access list, the KQL

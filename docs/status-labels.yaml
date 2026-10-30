@@ -1,4 +1,14 @@
 components:
+  readable-coordinator-brief:
+    availability: Custom
+    mode: deployed-existing-target-with-private-workbench-reader
+    implementation: agents.coordinator_brief
+    note: Opt-in plain-text prompt output using the existing native Fabric/document tools. The direct delegated Logic App retains raw response JSON and publishes a create-only Markdown review after source-scope, tool-success, document-shape and blocker-coverage guards. Site/case/program/version metadata scopes the loopback workbench list/reader; no raw traces or arbitrary Blob URLs are exposed. These guards do not independently verify every narrative claim. The brief recommends review, never authorizes or executes rework, generates packages or updates Dataverse. Older structured versions and default bootstrap remain unchanged. Actual private Blob publication and employee reader are verified on the existing synthetic target; no fresh-target or continuous Activator proof is claimed.
+  local-close-out-workbench:
+    availability: Custom
+    mode: local-fixture-ui-with-delegated-assistant-and-registered-validation
+    implementation: agents.workbench
+    note: React case queue/detail with a left-side assistant. Case cards are labelled seed fixtures, not live Fabric/Dataverse state. The separate pinned Foundry assistant uses an explicitly created UserEntraToken Fabric connection and the existing managed-identity document IQ connection; assistant publication does not edit the coordinator or its connections. Actual operator-scoped native Fabric and document retrieval were verified against the Stockholm fixture's exact KQL sourceRef and blockers. The loopback API requires both retrieval receipts, forwarded site/case/program/scenario and matching fixture-shaped provenance; failures have no seed fallback. This is not browser-user isolation or unattended coordinator authentication. Optional registered-photo validation attaches pinned bytes and publication context to the existing validator; durable local IDs prevent automatic repeat inference, with publisher-ledger confirmation separate from model completion. An operator UI submission verified live photo assessment and publisher confirmation of all three events. The panel separates photo review from event delivery, shows elapsed progress and collapses technical IDs. Automatic downstream completion remains unverified through this UI; Fabric capacity must be active. No arbitrary uploads, approvals, business actions or packages.
   fresh-portal-deployment:
     availability: Custom
     mode: implemented-not-fresh-cloud-verified
@@ -6,9 +16,9 @@ components:
     note: Template includes flow hosts and MI grants; output bootstrap command registers target-bound agents/OpenAPI and publishes locked ZIPs without inference. Actual versions replace pending-publication settings; both workflows remain Disabled until the manual checklist is completed. Public button loads main; bootstrap must use the same published revision. Native Fabric grants/bindings are external. Fresh-target deployment remains unverified. No hosted agent, Fabric provisioning, automatic credential fallback or Storage policy exception.
   headless-blob-activator-flow:
     availability: Custom
-    mode: direct-coordinator-deployed-live-response-capture-unverified
+    mode: direct-coordinator-delegated-native-grounding-verified
     implementation: docs/HEADLESS-FLOW.md
-    note: Playground validation publication, Fabric projection and authenticated dispatch verified. Project-MI native Fabric execution now succeeds; old Function rejected retrieval provenance afterward. Coordinator Logic App now directly invokes Foundry, polls a background response for up to 30 minutes and saves completed raw JSON to results Blob, without that Function or KQL/citation validation. Deployed definitions read back Healthy; no live run of the replacement workflow is claimed. Existing validation/publisher retained. Fabric Web callback still uses an approved service-principal credential because WorkspaceIdentity is unsupported; all-MI Deploy-button delivery remains gated. Two-minute Fabric projector schedule expires 2026-10-29T18:42:39Z.
+    note: Existing-target coordinator v17 is proven through an actual existing Fabric dispatch, native Fabric/document IQ and response Blob. Exact live-test revision, all three Stockholm blockers and latest-only validation citations were checked independently. The approved exception uses a dedicated public OAuth client and Key Vault-held renewable user credential; Logic App MI reads/rotates only that secret, while Blob output remains MI. Runs are serialized with asynchronous acknowledgement. Native KQL Data Agent MI/SPN authentication is unsupported; default bootstrap still publishes its MI configuration, not this exception. No coordinator Function, fact injection or Fabric provisioning. Validation/publisher, assistant and callback ingress retained; the temporary proof workflow was removed. Raw-response capture is not built-in grounding validation, approval or package generation. Reauthentication can be required; a week-long Activator/projector schedule is not proven by this callback test.
   foundry-model:
     availability: GA
     mode: live-regional

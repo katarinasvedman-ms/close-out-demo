@@ -21,6 +21,7 @@ agents = [
     "azure-ai-projects>=2.2.0,<2.8.0",
     "azure-identity==1.27.0",
     "azure-storage-blob>=12.24,<13",
+    "msal==1.39.0",
 ]
 flow = [
     "azure-functions>=1.21,<2",

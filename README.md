@@ -14,7 +14,7 @@ The portal template includes the Azure foundation for the
 The public button loads `main`; use the matching published source revision
 for the publication command. It cannot deploy uncommitted code.
 Strict all-managed-identity operation is not currently supported by the selected
-Fabric callback/projector and Azure Files hosting configuration. Review the
+Fabric KQL Data Agent, callback/projector and Azure Files hosting configuration. Review the
 [manual checklist and identity limitations](docs/MANUAL_STEPS.md#playground-flow-deployment-checklist)
 before provisioning; no credential exception is automatically approved.
 
@@ -52,7 +52,10 @@ command explicitly authorizes creating an absent connection; omit
 It never overwrites a mismatching existing connection or deploys Fabric.
 Use `--facts-mode stub` explicitly, without the connection-creation flag, if you
 want the local synthetic-facts client instead. Native configuration never
-silently falls back to it.
+silently falls back to it. The selected KQL-backed Data Agent does not support
+this MI authentication path. The existing demonstration instead has an
+explicitly approved [delegated coordinator exception](docs/HEADLESS-FLOW.md#coordinator-fabric-authentication-gate);
+bootstrap does not register its OAuth app or create its credential automatically.
 
 **No document upload, generated assets or inference is required for publication.**
 Document loading, indexing checks and local-client smoke tests are
@@ -62,7 +65,8 @@ The button alone still does not publish agents or knowledge-base definitions.
 No hosted agent, application container or registry is part of this solution.
 This is not the full planned Azure/Fabric/Power Platform solution.
 The existing development [Blob/Activator headless flow](docs/HEADLESS-FLOW.md) reuses the existing
-Fabric IQ tool, with Logic Apps invoking Foundry using managed identity.
+Fabric IQ tool. Validation invokes Foundry with managed identity; the existing
+coordinator now uses an explicitly approved renewable delegated user credential.
 Pinned upload contracts, Blob adapters/outbox, workflow/Function definitions and
 optional flow Bicep are deployed to the selected test target. An actual Blob
 upload triggered Logic Apps and managed-identity Foundry validation. After the
@@ -75,13 +79,21 @@ were verified. After Fabric rejected WorkspaceIdentity, the user authorized a
 dedicated app-only callback credential, now protected in Key Vault and Fabric.
 An actual authenticated Fabric Web activity reached the Logic Apps Request
 trigger; anonymous access is denied. The Data Agent additively exposes live
-snapshots. After changing its Foundry connection to Project Managed Identity
-and granting the project identity Read/database Viewer, the native Fabric call
-succeeded. The old coordinator Function subsequently rejected provenance.
+snapshots. The original project-MI connection reached the native tool but returned
+an internal Kusto error; adding database Viewer did not make KQL grounding work.
 The replacement coordinator workflow calls Foundry directly, waits for its
 background response and saves unmodified completed response JSON to Blob.
-Its deployed definition and health are verified, but a live invocation of the
-replacement and a fresh unattended proof have not been performed.
+The existing target's verified coordinator version 17 uses a separate UserEntraToken
+Fabric connection and an approved dedicated OAuth app. Logic Apps refreshes its
+Key Vault-held user credential and rotates it before inference; Blob output
+remains MI. An actual existing Fabric dispatch produced the three Stockholm gaps
+with exact live-revision provenance, document IQ and the latest PHOTO-20
+assessment, and saved the response to Blob without a per-run sign-in. This is
+delegated automation, not an all-MI flow or a guarantee against reauthentication.
+An opt-in readable coordinator version now writes a Markdown review brief
+alongside the raw trace; the workbench can list/read private saved briefs.
+See [readable briefs](docs/HEADLESS-FLOW.md#readable-coordinator-briefs) for its
+publication guards and the separate existing-target acceptance.
 The template includes that Azure hosting foundation; it adds no
 Azure Event Hubs service. Fresh-target runtime acceptance remains unverified.
 **The button requires the template and code to be published to `main`; local
@@ -209,15 +221,134 @@ Configure that command as a **stdio MCP server**, not an HTTP endpoint. It expos
 
 The launch-time `--site` allowlist cannot be expanded by a tool call. This is a local fixture boundary, not Entra authentication or production role enforcement. A scenario name selects synthetic data; it does not grant authorization. Starting the process from a terminal waits for an MCP client; normal stdout is reserved for the protocol.
 
-`READINESS_SOURCE=stub`, `DATA_AGENT_MODE=stub`, and `EVENT_SINK=stub` are the offline defaults. Invalid values fail; selecting `fabric`, `live`, or `eventstream` fails explicitly because live adapters do not exist. The local report displays dependency modes and `dataverse: not-connected`. The Presenter is not yet wired to these stubs.
+`READINESS_SOURCE=stub`, `DATA_AGENT_MODE=stub`, and `EVENT_SINK=stub` are the offline defaults. Invalid values fail; selecting `fabric`, `live`, or `eventstream` fails explicitly because live adapters do not exist. The local report displays dependency modes and `dataverse: not-connected`. The workbench below reads labelled seed cases separately; it is not connected to the replay ledger or production process.
 
-## Presenter skeleton
+## Local close-out workbench
+
+The React/Vite workbench provides a two-case queue, Site 360-style detail,
+fixture readiness, evidence findings, document metadata and a persistent left-side
+assistant. Case cards use `seed\seed.json` through the scoped fixture reader.
+They are explicitly **not live Fabric, Dataverse or headless run status**.
+The lifecycle is a process guide, not an invented transition history.
+
+Run the loopback-only Python API and Vite in separate terminals:
 
 ```powershell
+uv sync --frozen --extra agents --python 3.11
+uv run --frozen --extra agents python -m agents.workbench
+# Second terminal, after the npm ci step above:
 npm run dev --workspace @close-out/presenter
 ```
 
-Use the localhost URL printed by Vite. The page deliberately reports that no integrations are connected; no demo state or successful live behavior is fabricated.
+Use Vite's printed localhost URL. Its `/api/presenter` proxy defaults to
+`http://127.0.0.1:5190`; set `PRESENTER_API_URL` before starting Vite if the API
+uses a different `--port`. Keep the API loopback-only: it uses the signed-in
+operator's Azure CLI identity, not browser-held credentials or per-user ACLs.
+This development server is not a production hosting/authentication solution.
+
+**Close-out briefs** lists saved review documents for the selected site's case,
+with a readable Markdown view and Refresh. Listing/reading never starts inference.
+The API uses the registered validation target's Blob account, or an explicit
+`--briefs-storage-url "https://<existing-account>.blob.core.windows.net"`.
+The signed-in operator needs existing read/list access to its private `results`
+container. Only published, scope-matched `.md` documents are shown, never raw
+response traces or invented conversions of old JSON. Unconfigured storage and
+read failures are reported explicitly. Briefs are recommendations based on an
+evidence snapshot, not approvals or live updates to the case overview.
+See [brief publication](docs/HEADLESS-FLOW.md#readable-coordinator-briefs).
+
+To publish the **separate** read-only prompt assistant in an existing project:
+
+```powershell
+uv run --frozen --extra agents python -m agents.assistant --endpoint "https://<resource>.services.ai.azure.com/api/projects/<project>"
+```
+
+Registration reads the existing `close-out-coordinator` model and native
+Fabric/document IQ bindings, creates/reuses an immutable `close-out-assistant`
+version, verifies read-back and writes ignored `.local\foundry\assistant.json`.
+By default it reuses those bindings without modifying connections.
+Override `--source-agent`, `--name` and `--output` when needed. Restart the API
+after registration; `--config` selects a non-default assistant settings file.
+Without that file, case browsing still works and chat is explicitly unavailable.
+
+For interactive Fabric access using the signed-in operator, give the assistant
+a **separate** delegated connection:
+
+```powershell
+uv run --frozen --extra agents python -m agents.assistant `
+  --endpoint "https://<resource>.services.ai.azure.com/api/projects/<project>" `
+  --fabric-connection close-out-assistant-fabric-user --create-fabric-connection
+```
+
+This explicitly authorizes creating an absent `UserEntraToken` connection to the
+source agent's existing Fabric endpoint. Subsequent runs reuse a matching
+connection; mismatches and attempts to replace the source connection fail.
+No source agent, existing connection, role, consent grant or Fabric item is
+modified. Document IQ retains its existing managed-identity connection.
+This delegated path is for the local signed-in operator, **not an unattended
+Logic Apps coordinator**. See [manual prerequisites](docs/MANUAL_STEPS.md#interactive-workbench-fabric-delegation).
+
+Chat sends the selected site's identity/program/scenario and bounded conversation
+history, **not local seed facts**, to the pinned Foundry version. Native Fabric
+retrieves synthetic fixtures; document IQ retrieves synthetic text counterparts.
+The API requires successful receipts from both sources before displaying an answer.
+It also checks the Fabric question's site/case/program/scenario and requires
+matching fixture-shaped provenance, case and program in the returned facts.
+An inner retrieval error without those facts is rejected even when Foundry marks
+the tool and response completed. These checks do not independently verify every
+factual claim or citation against a KQL snapshot.
+Switching sites clears the conversation. Native retrieval needs an active Fabric
+capacity and the existing connection's permissions. Failed retrieval is shown,
+never replaced with a seeded answer. Stored raw responses are ignored under
+`.local\workbench\`; a four-minute wait timeout does not prove the remote run
+stopped and must not trigger a blind retry.
+
+To enable **Submit for validation**, pin an existing publication-enabled validation
+agent and one photo in an already registered evidence batch:
+
+```powershell
+uv run --frozen --extra agents python -m agents.workbench_validation `
+  --endpoint "<existing-project-endpoint>" `
+  --storage-url "https://<existing-account>.blob.core.windows.net" `
+  --source-run-id "<registered-run-uuid>" --source-batch-id "<registered-batch-uuid>" `
+  --evidence PHOTO-20
+```
+
+This read-only preflight verifies registered Blob/photo/RFDS hashes, versions and
+the existing agent definition. It does not publish an agent, invoke inference,
+resume Fabric or change cloud resources. It writes ignored
+`.local\foundry\validation.json`; restart the API to load it
+(`--validation-config <path>` selects another file). The operator needs Azure CLI
+read access to the existing `inputs` and `ledger` containers and permission to
+invoke the existing agent. Its existing publication tool retains its own authorization.
+
+The matching site's validation panel previews the pinned photo. An explicit
+submission attaches its **actual bytes**, registered metadata/checklist/RFDS and
+`publicationContext` to the pinned Foundry validator. This is a real, chargeable
+invocation: the agent's existing publication tool can start the downstream cloud
+flow. The API does not run the coordinator or synthesize Fabric readiness.
+
+Each new assessment gets a fresh publication UUID persisted locally before the
+initial POST. Repeated requests/reloads reuse the stored response ID; polling never
+repeats inference. An ambiguous initial POST blocks further submissions for that
+target pending operator inspection of Foundry/publisher receipts. Do not delete the
+local SQLite ledger to force a retry. **Refresh status** resumes polling/rechecks the
+publisher ledger; it never creates another assessment.
+
+Assessment output and publication acknowledgement are displayed separately. Only a
+matching completed publisher ledger with all three expected event IDs is labelled
+Sent to Fabric. While a check is running, the panel shows an elapsed timer and
+submission/check/delivery stages without inventing a percentage or downstream status.
+Noncompliant output is labelled Photo needs review; model findings and uncalibrated
+confidence are expandable, and tolerance claims still require program-policy review.
+Response IDs, publication IDs and event IDs are collapsed under technical details.
+This is not proof of Fabric readiness, Activator dispatch, coordinator
+completion, approval or a finished package. Case cards remain seed fixtures.
+Local invocation/receipt tests use mocks. An operator submission through the UI has
+also verified live photo assessment and publisher confirmation of all three events.
+The UI does not verify subsequent Fabric processing or full downstream completion.
+Arbitrary photo uploads, approvals, work-order/ticket actions, package generation
+and system-of-record writes remain unconnected.
 
 ## Contracts
 

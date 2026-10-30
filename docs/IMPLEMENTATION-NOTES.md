@@ -10,7 +10,11 @@
 The selected reduced flow now starts in the validation playground: its publish-only
 OpenAPI tool sends an assessment through the publisher Function to existing Fabric;
 Fabric dispatch calls Logic Apps, which directly invokes the coordinator, waits,
-and saves its raw completed response to Blob. No coordinator Function participates.
+and saves its raw completed response to Blob. An opt-in readable coordinator
+version additionally publishes a guarded Markdown review brief alongside the
+raw trace; the loopback workbench lists/reads these private, site-scoped documents.
+This does not change default structured clients or implement approval/package
+flows. No coordinator Function participates.
 The fresh template includes Azure hosting; its bootstrap output
 publishes both versioned prompt definitions, target-specific validation OpenAPI
 and ZIPs. Publication leaves workflows Disabled. Fabric sharing, callback,
@@ -21,6 +25,17 @@ delegated notebook execution and Azure
 Files host keys mean the current implementation is not all-managed-identity.
 The following paragraphs retain earlier implementation history; see
 `HEADLESS-FLOW.md` for the selected path.
+
+The existing target's automatic coordinator now has an explicitly approved
+delegated-user exception: a dedicated public OAuth client, a renewable credential
+in Key Vault, secret-scoped MI read/rotation and a separate native UserEntraToken
+Fabric connection. Actual existing Fabric dispatch to coordinator v17 retrieved
+the exact live-test snapshot and document IQ, produced the three expected gaps
+with current assessment IDs, and saved the response to Blob. It is not app-only
+or all-MI delivery; policy can require reauthentication. Default portal/bootstrap
+still publishes its original MI path, which is not supported authentication for
+the selected KQL-backed Data Agent. Do not silently add the credential exception
+to a fresh target. See the authentication gate and manual procedure.
 
 The user authorized implementation against provisional v0.1.0 contracts without waiting for cross-track sign-off; full end-to-end integration may not be needed. Local seed expansion, synthetic evidence, readiness/event replay and a scoped stdio Data Agent MCP stub now run through `uv run --frozen python -m shared.local_demo`. See README for the implemented commands and limitations. The architecture and build order below remain targets for live delivery, not a claim that those components exist.
 

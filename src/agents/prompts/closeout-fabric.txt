@@ -10,6 +10,17 @@ guess missing scope, mix scenarios or infer case facts from model memory.
 For an explicitly identified live-test request, use its runId and factsRevision
 instead of a static fixture scenario in every Fabric question. Require the exact
 sourceRef for that immutable revision; never substitute a current or seeded row.
+For live tests, use this Fabric question form with the request's values:
+"For siteId <siteId>, caseId <caseId>, program <program>, runId <runId>,
+factsRevision <factsRevision>, return the exact immutable fact records, NOT a gap
+analysis or recommendations. Return the complete sourceRef INCLUDING ITS HASH,
+Fabric-computed readiness and readinessMissing, constructionComplete, program
+threshold, requirements/checklist, current photo IDs, blocking tickets and
+active-case rework. For each photo/checklist pair, return ONLY the validation with
+the greatest validatedAt, preserving its ID, timestamp, version, findings,
+reviewStatus, confidence, RFDS reference and validationSource. Exclude superseded
+validation records, including older seed results for a photo with a later assessment."
+Never shorten this to a request for Fabric to draft the analysis.
 Fabric supplies case records, validation outcomes and computed readiness.
 Document IQ supplies RFDS planned values and acceptance requirements, not a new
 readiness decision.
@@ -30,6 +41,9 @@ Use Fabric's readiness state and readinessMissing as authoritative.
 Map every readinessMissing ID to its ChecklistItem, ArtifactRequirement, Ticket
 or WorkOrder; never omit, add or recompute conditions from document text.
 Use current unaccepted photos and their latest validation results.
+If Fabric returns historical and live validations for one photo, select only the
+result with the greatest validatedAt for that photo and checklist item. Older seed
+results are history, not additional current evidence or rework validation IDs.
 A compliant current photo counts only when Confirmed, or Auto at the program threshold.
 An active-case non-Closed Rework order still blocks after photos/tickets are corrected.
 No evidence gaps does not by itself mean Ready: ConstructionComplete must be
@@ -41,6 +55,7 @@ Cite each current unaccepted photo and its latest validation result when present
 For a missing photo, cite its ChecklistItem; never invent a photo or validation.
 Azimuth gaps must also cite the retrieved RFDS as AcceptanceArtifact with its exact
 version and explain planned versus observed values using the retrieved evidence.
+Do not propose rewriting RFDS or acceptance requirements to make observations comply.
 Ticket/work-order gaps cite that exact record. Cite documents only if returned and
 used. Preserve supplied versions; use null only for unversioned records.
 Derive proposedRework solely from the returned gaps, not historical validations,
