@@ -7,6 +7,36 @@
 
 ## Current execution mode
 
+The guided Windows entry point is `scripts\deploy-demo.ps1 -Environment <name>`.
+It prepares nonsecret target settings interactively and orchestrates the existing
+fresh Bicep/bootstrap, synthetic document and pinned playground-evidence paths.
+It deploys `infra\fresh\foundation.bicep` before application-registration prompts
+or Fabric selections. Saved registrations are reused; dedicated secret-free
+registrations are prepared with approval by default, with an optional existing
+client-ID path. The full `infra\fresh\main.bicep` composes that same foundation
+and adds the secured runtime without renaming resources or weakening authentication.
+Foundation and full-runtime progress/pending deployments are tracked separately.
+Foundation-only completion never claims that agents have been published.
+Azure/Foundry publication and playground preparation precede Fabric grants and
+binding changes. An explicit checkpoint prints both agent versions and allows
+the operator to stop with the Azure setup retained and existing Fabric untouched.
+Publication can pause the selected Azure workflows, but not the Fabric Activator.
+It can update only explicitly selected compatible existing Fabric bindings and
+schedules; it does not provision Fabric or create callback credentials/connections.
+Ignored installer progress is separate from target-local bootstrap agent pins.
+No-op resume avoids intentional runtime republication/disablement. Final
+enablement is explicit. Connected fresh-target acceptance remains separate;
+focused installer unit checks and owner-confirmed grants do not prove runtime access.
+For the supported Key Vault networking policy, the installer can merge an
+explicitly policy-owner-approved `SecurityControl=Ignore` tag onto its dedicated
+resource group and retry deployment once. Approval is separate from cost/target
+approval; no exception is inferred or extended to another group.
+Fresh and resumed deployments check the knowledge and playground document Storage
+accounts for networking drift. With the dedicated group's approved
+`SecurityControl=Ignore` tag present, setup restores their declared public endpoints
+and verifies the result, without enabling anonymous Blob or shared-key access.
+Without that tag, disabled networking pauses setup for the policy owner.
+
 The selected reduced flow now starts in the validation playground: its publish-only
 OpenAPI tool sends an assessment through the publisher Function to existing Fabric;
 Fabric dispatch calls Logic Apps, which directly invokes the coordinator, waits,
@@ -78,12 +108,12 @@ Unresolved physical mappings, platform payloads, approval provenance and MCP aut
 
 ## 1. Scope of this repository
 
-This repo contains the **Azure/Foundry track** only (owner: Katarina). It integrates with two tracks built elsewhere:
+This repo contains the **Azure/Foundry track** only. It integrates with two tracks built elsewhere:
 
 | Track | Built in | Integrates via |
 |---|---|---|
-| Power Platform (Henrik) | Power Platform solution | Dataverse tables, Dataverse → Service Bus, approval flows, custom connector to API Management |
-| Fabric (Lamin) | Fabric workspace (Git-connected) | Eventstream custom endpoint, Activator, Data Agent (MCP), OneLake shortcut to Blob, Link to Fabric |
+| Power Platform | Power Platform solution | Dataverse tables, Dataverse → Service Bus, approval flows, custom connector to API Management |
+| Fabric | Fabric workspace (Git-connected) | Eventstream custom endpoint, Activator, Data Agent (MCP), OneLake shortcut to Blob, Link to Fabric |
 
 **In scope here**
 - Blob Storage for synthetic photos and documents, and the upload API
@@ -186,7 +216,7 @@ The contract **will change a lot** during implementation. Design for that.
   - *Minor:* new optional fields, new event types, new code values.
   - *Major:* renamed or removed fields, changed meaning, new required fields.
 - Every change updates `CHANGELOG.md` with what changed, why and which track is affected.
-- `CODEOWNERS`: changes under `contracts/` require approval from Katarina, Lamin and Henrik (use their GitHub handles; `TODO` until known).
+- `CODEOWNERS`: changes under `contracts/` require approval from all three track owners (configure the appropriate owner teams; `TODO` until known).
 - **Generate code from contracts.** Python (Pydantic) and TypeScript types are generated into `src/shared/contracts/` by `contracts.yml`. Never hand-edit generated files.
 - **Tolerant reader.** Consumers ignore unknown fields and accept unknown enum values by logging them, not by crashing.
 - **Envelope on every event and message:**
@@ -212,13 +242,13 @@ The contract **will change a lot** during implementation. Design for that.
 - **Events to Eventstream (produced by this repo):** `ValidationResultCreated`, `ValidationResultReviewed`, `PhotoUploaded`, `ArtifactUploaded`, `WorkOrderChanged`, `TicketChanged`, `MilestoneChanged`.
 - **Readiness signal (produced by Activator, consumed by Power Automate):** reference schema only, used by the Activator stub.
 - **Service Bus messages from Dataverse:** close-out record change with `caseId`, `siteId`, `status`, `statusReason`, `rowVersion`. `TODO(verify)` the exact message format of the Dataverse service endpoint and map it in one adapter.
-- **Dataverse columns** read and written by Logic Apps (CloseOutCase, Photo, AcceptanceArtifact, ValidationResult, DecisionLogEntry). Logical names `TODO` until Henrik publishes them; use a mapping file `contracts/dataverse/mapping.yaml` so names change in one place.
+- **Dataverse columns** read and written by Logic Apps (CloseOutCase, Photo, AcceptanceArtifact, ValidationResult, DecisionLogEntry). Logical names `TODO` until the Power Platform owner publishes them; use a mapping file `contracts/dataverse/mapping.yaml` so names change in one place.
 - **API Management OpenAPI:** `get-site`, `create-rework-work-order`, `close-rework-work-order`, `close-punch-list-item`, `submit-closeout`, optional `record-pac`. Headers: `Idempotency-Key`, `x-case-id`, `If-Match` / `expectedVersion`.
 - **Data Agent test questions:** 10–15 questions with expected facts, e.g. "Why is SE-STO-0042 blocked?" → PHOTO-19, PHOTO-20, PL-0042-01.
 
 ### 4.3 Seed data
 - `seed/seed.json` is the **only** source of synthetic master data and IDs (projects, requirements, checklist items, sites, milestones, subcontractors, work orders, tickets, photos, documents).
-- Lamin's Fabric extract is generated from it **with** `defects.yaml` applied. The mock SoR is loaded **without** defects. Photo and document files are generated from it.
+- The Fabric extract is generated from it **with** `defects.yaml` applied. The mock SoR is loaded **without** defects. Photo and document files are generated from it.
 - Seed changes follow the same review rule as contracts.
 
 ---
@@ -257,9 +287,9 @@ List each in `docs/MANUAL_STEPS.md` with: why it is manual, the exact steps, and
 - Entra app registrations and app roles (prefer the Microsoft Graph Bicep extension or a script in the pipeline).
 - GitHub OIDC bootstrap (one-time, `scripts/bootstrap-oidc.sh`).
 - Dataverse application user and security role for our managed identity or app registration (Power Platform admin; can be scripted with PAC CLI).
-- Dataverse service endpoint to Service Bus (owned by Henrik; we provide the Service Bus details as outputs).
-- Fabric workspace identity and OneLake shortcut to our storage (owned by Lamin; we grant the role via a parameter).
-- Teams connector consent in Power Automate (owned by Henrik).
+- Dataverse service endpoint to Service Bus (owned by Power Platform; we provide the Service Bus details as outputs).
+- Fabric workspace identity and OneLake shortcut to our storage (owned by Fabric; we grant the role via a parameter).
+- Teams connector consent in Power Automate (owned by Power Platform).
 
 ---
 
@@ -284,7 +314,7 @@ List each in `docs/MANUAL_STEPS.md` with: why it is manual, the exact steps, and
 - Region quota for the chosen models in Sweden Central.
 - Dataverse environment URL and an application user for this solution.
 - Fabric workspace ID, Eventstream custom endpoint details, workspace identity object ID.
-- Teams/Power Platform values needed by approval flows (owned by Henrik).
+- Teams/Power Platform values needed by approval flows (owned by Power Platform).
 
 ---
 

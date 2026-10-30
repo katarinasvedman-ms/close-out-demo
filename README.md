@@ -8,6 +8,51 @@ The implementation provides **real Foundry validation and close-out prompt agent
 
 ## Deploy the playground flow
 
+From the downloaded repository, run:
+
+```powershell
+.\scripts\deploy-demo.ps1 -Environment demo-review
+```
+
+The guided installer explains missing prerequisites, guides sign-in and target
+selection, prepares nonsecret settings, and reuses the existing Bicep, agent
+publication and document/evidence helpers. It does not require a configuration
+file prepared in advance. Keep the same environment name when rerunning; state
+and exact playground inputs are kept under ignored `.local\installer\`.
+
+The Azure/Foundry foundation is deployed **before application client IDs or
+Fabric selections are requested**. Saved application registrations are reused;
+otherwise dedicated secret-free registrations are prepared with approval.
+Entering an existing client ID is an optional administrator-supplied path.
+The foundation milestone is infrastructure only, not agent publication.
+For a new target, answer **n** to using an administrator-supplied application,
+then approve preparation of the new dedicated registrations and API settings.
+Confirm the callback authentication approach only with target-owner approval;
+this does not create a password or Fabric connection.
+
+Azure infrastructure, both Foundry agents, native document IQ, runtime packages
+and playground inputs are prepared **before Fabric permission or binding changes**.
+The installer prints the project and agent versions, then asks whether to continue
+with Fabric setup. Answer **n** to stop there and preserve your existing Fabric demo.
+Do not submit the playground message until Fabric setup and runtime enablement finish.
+
+**Fabric is not provisioned.** Select existing compatible Fabric items. Only
+explicitly approved bindings, permissions and schedule updates are applied;
+incompatible or unsupported changes are handed to the owner rather than guessed.
+For example: "Grant this Foundry project identity direct Read on this Data Agent,
+then rerun the same command." New Azure identities are displayed after provisioning.
+The existing Fabric callback needs an approved target-specific Web connection;
+the installer does not create its credential or silently repoint a shared connection.
+
+After setup, confirm runtime enablement, open the printed Foundry project, select
+the exact validation agent version, attach the exported image and paste the
+prepared message. The handoff is saved in `.local\installer\<environment>\handoff.txt`.
+Installation is **not end-to-end proof**: connected runtime acceptance remains
+separate from Azure preparation. See [deployment details](docs/DEPLOY-TO-AZURE.md)
+and the [owner-only steps](docs/MANUAL_STEPS.md#playground-flow-deployment-checklist).
+
+### Advanced: portal deployment
+
 The portal template includes the Azure foundation for the
 [playground-to-Blob flow](docs/HEADLESS-FLOW.md#selected-playground-to-blob-flow).
 **ARM, publication and manual Fabric setup are separate required phases.**
@@ -352,7 +397,7 @@ and system-of-record writes remain unconnected.
 
 ## Contracts
 
-`contracts\VERSION` is currently `0.1.0`, a review draft, not an approved release. `contracts\REVIEW-DECISIONS.md` is the focused review packet for Henrik, Lamin and Katarina. It covers proposed field nullability, mappings, repeated transitions, closure authorization, review ordering and output storage.
+`contracts\VERSION` is currently `0.1.0`, a review draft, not an approved release. `contracts\REVIEW-DECISIONS.md` is the focused review packet for the Power Platform, Fabric and Azure/Foundry track owners. It covers proposed field nullability, mappings, repeated transitions, closure authorization, review ordering and output storage.
 
 The draft covers the shared objects/code lists, seven events, normalized Dataverse message, readiness signals, APIM OpenAPI, agent/package outputs and Data Agent questions. The raw Dataverse endpoint format, physical mappings, and real MCP tool schemas are explicitly unverified.
 

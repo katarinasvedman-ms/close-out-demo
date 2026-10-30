@@ -2,6 +2,44 @@
 
 ## Playground flow deployment checklist
 
+**Start with the guided installer, not this administrator reference:**
+
+```powershell
+.\scripts\deploy-demo.ps1 -Environment demo-review
+```
+
+The installer discovers and saves nonsecret selections, prepares Azure and
+playground inputs, and resumes on the same command. It only changes approved
+bindings/permissions/schedules on existing compatible Fabric items; it never
+provisions Fabric. See [guided setup](DEPLOY-TO-AZURE.md#guided-setup-from-a-downloaded-repository).
+Preparation does not run an end-to-end assessment or prove a connected flow.
+The Azure/Foundry foundation comes before application client-ID or Fabric
+selection prompts. Saved registrations are reused; automatic preparation needs
+explicit approval and Entra permission. Existing client IDs are an optional
+administrator-supplied alternative, not a prerequisite for the foundation.
+Both Foundry agents, native document IQ, runtime packages and playground inputs
+are prepared before Fabric grants or binding changes. At the Azure-ready
+checkpoint, answer **n** to retain that setup without changing an existing Fabric demo.
+
+The genuine owner boundaries are:
+
+| Owner | Required action when the installer pauses |
+|---|---|
+| Azure/Entra administrator | Approve the target's costs/network/authentication choices and supply missing resource-creation, role-assignment or application-registration permission. A supplied existing API app must be single-tenant with identifier URI `api://<client-id>` and token version 2. |
+| Azure policy owner | Separately approve any supported `SecurityControl=Ignore` exception for the exact dedicated resource group. The installer sets the tag after confirmation when the operator has permission; portal steps are only a fallback. |
+| Fabric Data Agent owner | Give the printed **Foundry project** identity direct Read on the selected published Data Agent. No extra workspace-wide access is substituted. |
+| KQL database owner | Allow or perform the additive Viewer grant for that same project identity when the installer cannot do it. |
+| Fabric workspace owner | Approve the publisher Function's Contributor grant on the selected workspace. Azure RBAC does not provide it. |
+| Fabric connection owner / Entra administrator | Prepare an approved service-principal Web connection for the exact new Logic App host and API audience, using the printed callback client ID/tenant. Store secrets only in Key Vault/Fabric credential storage; confirm identity and current expiry. Existing connection URLs cannot be patched through the supported API. |
+| Notebook/Activator/pipeline owner | Supply compatible existing event/snapshot contracts and approve only dedicated-item binding changes and bounded schedule renewal. Custom code or unsupported definitions are left for this owner, not replaced. |
+
+After the owner action, rerun the same command. The generated `handoff.txt`
+contains the exact target/identity and action, or the final playground image,
+message and selected validation version. Final enablement requires confirmation;
+the separate Blob-validation workflow stays disabled.
+
+### Advanced operator procedure (without the installer)
+
 This is the current new-target procedure. Older implementation records below are
 history, not instructions to restore the removed coordinator Function hop.
 Use the **same published source revision** for Bicep and bootstrap. A public
@@ -81,9 +119,16 @@ Rerunning `--publish-flow` disables both workflows again.
    This broader-than-item role is required by the tested Eventstream endpoint;
    obtain explicit approval rather than substituting workspace access for reads.
 2. Grant the **Foundry project** identity direct Read on the published Data Agent:
-   **Manage permissions -> Direct access -> Add user**, select the exact project,
-   additional permissions unchecked, email notification off. Grant it Viewer
-   on the underlying KQL database. To resolve its application ID read-only:
+   in the workspace item list, use the **Data Agent row's ... menu -> Manage
+   permissions -> Direct access -> Add user**. Alternatively, open the agent's
+   **Share** dialog, select its **Manage permissions** icon and **Advanced** if
+   needed. The installer prints the actual workspace, agent and project identity
+   names with the exact identity object ID, and saves them in `handoff.txt`.
+   Select that identity, leave additional permissions unchecked, turn email
+   notification off, and select **Grant**. Answering `y` in the installer only
+   confirms that this manual step is done; it does not grant access.
+   If the controls are unavailable, ask the Data Agent owner to perform it.
+   Grant the identity Viewer on the underlying KQL database. To resolve its application ID read-only:
    `az ad sp show --id "<projectPrincipalId>" --query appId --output tsv`.
    In the KQL database, an authorized owner can grant with
    `.add database ['<database-name>'] viewers ('aadapp=<project-app-id>;<tenant-id>')`
@@ -699,7 +744,9 @@ inner Kusto error.
 
 For the default configuration, the Fabric owner must give the **Foundry project** managed
 identity direct **Read** access to the published Data Agent: item **Manage
-permissions -> Direct access -> Add user**. Select the exact project identity,
+permissions** is on the Data Agent row's **...** menu in the workspace item list.
+Alternatively use **Share -> Manage permissions** (and **Advanced** if needed).
+Then select **Direct access -> Add user**. Select the exact project identity,
 leave additional permissions unchecked and disable email notification.
 Give the same identity database Viewer/query access to the agent's KQL source.
 Do not grant workspace-wide Contributor as a substitute for these read grants.

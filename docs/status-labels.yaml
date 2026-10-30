@@ -9,6 +9,11 @@ components:
     mode: local-fixture-ui-with-delegated-assistant-and-registered-validation
     implementation: agents.workbench
     note: React case queue/detail with a left-side assistant. Case cards are labelled seed fixtures, not live Fabric/Dataverse state. The separate pinned Foundry assistant uses an explicitly created UserEntraToken Fabric connection and the existing managed-identity document IQ connection; assistant publication does not edit the coordinator or its connections. Actual operator-scoped native Fabric and document retrieval were verified against the Stockholm fixture's exact KQL sourceRef and blockers. The loopback API requires both retrieval receipts, forwarded site/case/program/scenario and matching fixture-shaped provenance; failures have no seed fallback. This is not browser-user isolation or unattended coordinator authentication. Optional registered-photo validation attaches pinned bytes and publication context to the existing validator; durable local IDs prevent automatic repeat inference, with publisher-ledger confirmation separate from model completion. An operator UI submission verified live photo assessment and publisher confirmation of all three events. The panel separates photo review from event delivery, shows elapsed progress and collapses technical IDs. Automatic downstream completion remains unverified through this UI; Fabric capacity must be active. No arbitrary uploads, approvals, business actions or packages.
+  guided-demo-installer:
+    availability: Custom
+    mode: implemented-connected-runtime-unverified
+    implementation: scripts/deploy-demo.ps1
+    note: Foundation-first deployment, guided prerequisites, target discovery, nonsecret resumable state, agent/runtime publication, synthetic knowledge and pinned playground inputs. Both agent versions are printed before an optional stop without Fabric changes. Only approved narrow updates to compatible existing Fabric bindings/schedules; no Fabric provisioning or callback credential creation. Focused offline installer tests do not establish connected runtime acceptance. Owner handoffs remain for unsupported grants/connections; final enablement is explicit.
   fresh-portal-deployment:
     availability: Custom
     mode: implemented-not-fresh-cloud-verified
